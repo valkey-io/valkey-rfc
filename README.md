@@ -1,13 +1,13 @@
 Valkey RFC
 ==========
 
-This is a collection of feature proposals and descriptions of changes to Valkey
-that require some more details than just the text in a pull request or an issue.
+This repository is a collection of feature proposals and descriptions of changes to Valkey
+that require some more detail than just the text in a pull request or an issue.
 It is loosely inspired by RFCs and by Python's enhancement proposals (PEP).
 
 Each feature or larger topic is described in a markdown file that's named in
 uppercase and ends in `.md`. These files are not formally numbered, but we use
-the pull request number that added an RFC to refer to the change. For example,
+the pull request number that initially added an RFC to refer to the change. For example,
 this description in the README.md file was written in RFC #1.
 
 Workflow
@@ -37,4 +37,4 @@ to include may vary from case to case.
 * Rationale. Why certain design decisions have been made. Comparisons with
   similar features in other projects.
 * Specification. A more detailed description of the feature.
-* Links to related issues and PRs on this and other repos.
+* Links to related material such as issues, pull requests, papers, or other references.
