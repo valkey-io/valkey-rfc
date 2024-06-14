@@ -25,7 +25,7 @@ inclusion in Valkey. It's still just a proposal.
 
 Each file has one of the following statuses:
 
-* **Proposed**, meaning the file was added but there was not decision about it yet.
+* **Proposed**, meaning the file was added but there's no decision about it yet.
 * **Approved**, meaning the core team has made a decision to accept the feature.
 * **Rejected**, meaning the core team has made a decision to not accpt the feature.
 * **Informational**, for information that is not a feature, like this README file.
