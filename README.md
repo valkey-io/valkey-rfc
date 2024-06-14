@@ -23,20 +23,24 @@ consisteny and content quality. The content shouldn't be very vague or unclear.
 Then the proposal is merged. This doesn't mean that the feature is approved for
 inclusion in Valkey. It's still just a proposal.
 
-Each file has a status "Proposed", "Approved" or "Rejected" (or "Informational"
-like this README file).
+Each file has one of the following statuses:
 
-The core team can later change the status and make changes. For larger changes,
-the PR making the change is mentioned too and can be referred to by their
-respective pull-request numbers.
+* **Proposed**, meaning the file was added but there was not decision about it yet.
+* **Approved**, meaning the core team has made a decision to accept the feature.
+* **Rejected**, meaning the core team has made a decision to not accpt the feature.
+* **Informational**, for information that is not a feature, like this README file.
+
+The core team (the Technical Steering Committee) can change the status and make
+changes. For larger changes, the PR making the change is mentioned too and can
+be referred to by their respective pull-request numbers.
 
 What's useful to include?
 -------------------------
 
-Please include the following content. What information is useful to include may
-vary from case to case, but this is a guideline.
+The Valkey RFC format is not a strict format, but should include the following
+sections unless they are unnecessary for the proposal you are submitting.
 
-* Status and RFC number, i.e. the PRs adding or making major changes to the file.
+* Status and RFC number (the pull-request number).
 * Abstract. A few sentences describing the feature.
 * Motivation. What the feature solves and why the existing functionality is not
   enough.
