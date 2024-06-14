@@ -1,3 +1,8 @@
+---
+RFC: 1
+Status: Informational
+---
+
 Valkey RFC
 ==========
 
@@ -13,12 +18,13 @@ this description in the README.md file was written in RFC #1.
 Workflow
 --------
 
-An RFC starts off as a pull request. It's reviewed for formatting, style and
-consistency. Then the proposal is merged. This doesn't mean that the feature is
-approved for inclusion in Valkey. It's still just a proposal.
+An RFC starts off as a pull request. It's reviewed for formatting, style,
+consisteny and content quality. The content shouldn't be very vague or unclear.
+Then the proposal is merged. This doesn't mean that the feature is approved for
+inclusion in Valkey. It's still just a proposal.
 
-Each file has a status like "draft", "suggested", "approved" or "rejected". The
-possible statuses are yet to be decided.
+Each file has a status "Proposed", "Approved" or "Rejected" (or "Informational"
+like this README file).
 
 The core team can later change the status and make changes. For larger changes,
 the PR making the change is mentioned too and can be referred to by their
@@ -27,14 +33,16 @@ respective pull-request numbers.
 What's useful to include?
 -------------------------
 
-This is not a strict requirement of what to include in each file. What's useful
-to include may vary from case to case.
+Please include the following content. What information is useful to include may
+vary from case to case, but this is a guideline.
 
-* Status and the numbers of the PRs adding or making major changes to the file.
+* Status and RFC number, i.e. the PRs adding or making major changes to the file.
 * Abstract. A few sentences describing the feature.
 * Motivation. What the feature solves and why the existing functionality is not
   enough.
-* Rationale. Why certain design decisions have been made. Comparisons with
-  similar features in other projects.
-* Specification. A more detailed description of the feature.
+* Design considerations. A description of the design constraints and
+  requirements for the proposal. Comparisons with similar features in other
+  projects.
+* Specification. A more detailed description of the feature, including why
+  certain details in the design have been chosen.
 * Links to related material such as issues, pull requests, papers, or other references.
