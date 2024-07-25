@@ -23,18 +23,32 @@ There is growing [demand](https://github.com/orgs/valkey-io/discussions?discussi
 
 ## Design Considerations
 
-The ValkeyBloom module brings in a new bloom module data type into Valkey and provides commands to create / reserve bloom filters, operate on them (add items, check if items exist), inspect bloom filters, etc. It allows customization of properties of bloom filter (capacity, false positive rate, expansion rate, specification of scaling vs non-scaling filters etc) through commands and configurations. It also allows users to create scalable bloom filters.
+The ValkeyBloom module brings in a bloom module data type into Valkey and provides commands to create / reserve bloom filters, operate on them (add items, check if items exist), inspect bloom filters, etc. It allows customization of properties of bloom filter (capacity, false positive rate, expansion rate, specification of scaling vs non-scaling filters etc) through commands and configurations. It also allows users to create scalable bloom filters and back up & restore bloom filters (through RDB load and save).
 
-ValkeyBloom utilizes an open source (BSD-2) Bloom Filter Rust library.
+ValkeyBloom provides commands (BF.*), configs, etc to operate on Bloom objects which are top-level structures containing lower-level BloomFilter provided by an external crate ValkeyBloom utilizes an open source (BSD-2) Bloom Filter Rust library around which it implements a scalable bloom filter.
+
+When a bloom filter is created, a bit array is created with a length proportional to the capacity (number of items the user wants to add to the filter) and hash functions are also created. The number of hash functions are controlled by the false positive rate that the user configures.
+
+When a user adds an item (e.g. BF.ADD) to the filter, the item is passed through the filter and corresponding bit are set to 1. When a user checks whether an item exists on a filter (e.g. BF.EXISTS), the item is passed through the filters and if all the resolved bits have values as 1, we can say that the item exists with a false positive rate of X (specified by the user when creating the filter). If any of the bits are 0, the item does not exist and the BF.EXISTS operation will return 0.
+
+We have the following terminologies / properties:
+Bloom Object: The top level structure representing the data type. It contains meta data and a list of lower-level Bloom Filters (Implemented by an external crate) in case of scaling and a single lower-level bloom filter in case of non scaling.
+Bloom Filter: A single bloom filter (Implemented by an external crate).
+Capacity: The number of items we expect to add to a bloom filter. This controls the size of the filter.
+False Positive Rate: The accuracy the user expects when operating (set / check) on a filter. This controls the number of hash functions.
+Expansion Rate: This is used in scalable bloom filters where multiple bloom filters are stacked to allow users to continue using the same bloom object when it reaches capacity by adding another filter of larger capacity (expansion rate * prev filter capacity).
+Hash Functions: Hash functions used for bit check and set operations underneath.
+Hash Key: Keys used by the hashing function.
+
 
 ### Module OnLoad
 
-Upon loading, the module registers a new bloom module based data type and creates bloom filter (BF.* commands).
+Upon loading, the module registers a new bloom module based data type, creates bloom filter (BF.*) commands, bloom specific configurations and the bloom ACL category.
 
 * Module name: bloom
 * Data type name: bloom
 
-### Persistence
+### Persistence [WIP]
 
 ValKeyBloom implements persistence related Module data type callbacks for the Bloom data type:
 
@@ -42,10 +56,17 @@ ValKeyBloom implements persistence related Module data type callbacks for the Bl
 * rdb_load: Deserializes bloom objects from RDB.
 * aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
 
-RDB Compatibility:
+RDB Compatibility Strategy:
+
+During RDB Save of a bloom object, we will need to save hash keys used by hashing functions, number of hashing functions, number of bits of the bit array, bytes of the bit array itself.
+
+Since bloom objects contain lower-level bloom filter structures that contain the data above.
+
+WIP
 
 AOF Rewrite handling:
 
+WIP
 
 
 ### Memory Management
@@ -78,11 +99,11 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
     valkey-cli psubscribe '__key*__:*'
 ```
 
-### Scalale filters / Non Scaling filters
+### Scalale filters / Non Scaling filters [WIP]
 
 Bloom Filters can either be configured as scalable (default) or non-scalable.
 
-### Choice of Bloom Filter Library
+### Choice of Bloom Filter Library [WIP]
 
 We evaluated the following libraries:
 * https://crates.io/crates/bloomfilter
@@ -100,7 +121,10 @@ https://crates.io/crates/bloomfilter was chosen as it provides all the required 
 Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resuling in serialization / deserialization incompatibility. 
 
 
-### Max number of filters for scalable bloom filters
+
+### Max number of filters for scalable bloom filters [WIP]
+
+
 
 ### Large BloomFilter objects
 
@@ -123,20 +147,20 @@ BF.MEXISTS <key> <item> [<item> ...]
 BF.CARD <key>
 BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]
 BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]
-BF.INSERT <key> [ERROR <fp_error>] [CAPACITY <capacity>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]
+BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]
 
 Currently following commands (from ReBloom) are not supported:
 BF.LOADCHUNK <key> <iterator> <data>
 BF.SCANDUMP <key> <iterator>
 
-The BF.SCANDUMP command can be used to perform an incremental save on specific Bloom filter object.
-The BF.LOADCHUNK can be used to incrementally load / restore a bloom filter object from data from the BF.SCANDUMP command. 
+The BF.SCANDUMP command is used to perform an incremental save on specific Bloom filter object.
+The BF.LOADCHUNK is used to incrementally load / restore a bloom filter object from data from the BF.SCANDUMP command.
 
 The reason for not implementing these two commands is because the Module provides the ability to load and save BloomModule data type items during RDB load and save. BF.LOADCHUNK and BF.SCANDUMP are APIs to load bloom filter objects through commands, but since we will provide RDB save & load, having specific commands for the same purpose was not considered as required.
 
 Note: Based on the AOF Rewrite discussion, we will decide on whether these commands should be supported.
 
-### Configs
+### Configs [WIP]
 
 The default properties using which Bloom Filter objects are created can be controlled using configs.
 
