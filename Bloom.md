@@ -42,6 +42,10 @@ ValKeyBloom implements persistence related Module data type callbacks for the Bl
 * rdb_load: Deserializes bloom objects from RDB.
 * aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
 
+RDB Compatibility:
+
+AOF Rewrite handling:
+
 
 
 ### Memory Management
@@ -74,22 +78,37 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
     valkey-cli psubscribe '__key*__:*'
 ```
 
-### Choice of Bloom Filter Library
-
-We evaluated the following libraries:
-
-
-X was chosen as it provides all the required APIs for controlling a bloom filter, this library has been stable through the releases.
-
-### Large BloomFilter objects
-
-
 ### Scalale filters / Non Scaling filters
 
 Bloom Filters can either be configured as scalable (default) or non-scalable.
 
+### Choice of Bloom Filter Library
+
+We evaluated the following libraries:
+* https://crates.io/crates/bloomfilter
+* https://crates.io/crates/growable-bloom-filter
+* https://crates.io/crates/fastbloom
+
+Here are some important factors when evaluating libraries:
+* Is it actively maintained?
+* Has there been any breaking changes in serialization and deserialization of bloom filters over version updates?
+* Performance
+* Popularity
+
+https://crates.io/crates/bloomfilter was chosen as it provides all the required APIs for controlling a bloom filter. This library has also been stable through the releases.
+
+Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resuling in serialization / deserialization incompatibility. 
+
 
 ### Max number of filters for scalable bloom filters
+
+### Large BloomFilter objects
+
+Create and Delete operations on large bloom filters take longer durations and will block the main thread for this duration. 
+Because of this, the following operations can be handled differently:
+* defrag callback: If the memory used is greater than X MB (configurable with `bf.bloom_large_item_threshold`), we can skip defrag operations on this bloom object.
+* free_effort callback: This callback decides the free effort for the bloom object. If it is greater than X MB (configurable with `bf.bloom_large_item_threshold`), we can return 0 to use async free logic.
+* create operations (BF.ADD/MADD/INSERT): We can compute the estimated size of the bloom filter that will be created as a result of the operation. We can consider rejecting requests in case of unavailable memory.
 
 
 ## Specification
@@ -122,11 +141,11 @@ Note: Based on the AOF Rewrite discussion, we will decide on whether these comma
 The default properties using which Bloom Filter objects are created can be controlled using configs.
 
 The following module configurations are added to customize bloom filters:
-1. bf.bloom_capacity -> Controls the default number of items that can be added to a bloom filter object before it is scaled out (scaling) OR before it rejects add operations due to insufficient capacity on the object (nonscaling). 
-2. bf.bloom_expansion_rate -> 
-3. bf.bloom_max_filters
-4. bf.bloom_fp_rate
-5. bf.bloom_large_item_threshold
+1. bf.bloom_capacity: Controls the default capacity. When create operations (BF.ADD/MADD) are used, bloom objects will created will use the capacity specified by this config. This controls the number of items that can be added to a bloom filter object before it is scaled out (scaling) OR before it rejects add operations due to insufficient capacity on the object (nonscaling). 
+2. bf.bloom_expansion_rate: 
+3. bf.bloom_max_filters:
+4. bf.bloom_fp_rate:
+5. bf.bloom_large_item_threshold:
 
 
 ### ACL
