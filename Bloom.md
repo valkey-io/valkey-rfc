@@ -48,7 +48,7 @@ Upon loading, the module registers a new bloom module based data type, creates b
 * Module name: bloom
 * Data type name: bloom
 
-### Persistence [WIP]
+### Persistence
 
 ValKeyBloom implements persistence related Module data type callbacks for the Bloom data type:
 
@@ -56,17 +56,25 @@ ValKeyBloom implements persistence related Module data type callbacks for the Bl
 * rdb_load: Deserializes bloom objects from RDB.
 * aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
 
-RDB Compatibility Strategy:
+#### RDB Compatibility Strategy:
 
-During RDB Save of a bloom object, we will need to save hash keys used by hashing functions, number of hashing functions, number of bits of the bit array, bytes of the bit array itself.
+During RDB Save of a bloom object, we will need to save the number of filters, expansion rate, false positive rate. And for every underlying bloom filter in this object, we store its hash keys used by hashing functions, number of hashing functions, number of bits of the bit array, bytes of the bit array itself.
 
-Since bloom objects contain lower-level bloom filter structures that contain the data above.
+The data above is written into the RDB during save operations and can be restored from RDB load. However, the data that gets written to the RDB is specific to the data type's structure and struct members. Additionally, the data within the underlying bloom filter (from the external crate) is specific to the implementation of the bloom filter as the hash key (seed), raw bit array data, etc. can all vary.
 
-WIP
+Because of this, it is not possible to be RDB compatible with ReBloom. It might be possible if the RDB Save/Load of the ReBloom module is reverse engineered AND also the bloom filter implementation is changed to follow ReBloom Module's raw Bloom Filter structure syntax. Additionally, if there is any RDB change in ReBloom, this reverse engineering + structure updates will be needed once again.
 
-AOF Rewrite handling:
+For these reasons, ValkeyBloom is not RDB Compatible with ReBloom.
 
-WIP
+#### AOF Rewrite handling:
+
+Module data types (including bloom) can implement a callback function that will be triggered for Bloom objects to rewrites its data as command/s. Currently, we have not yet implemented the AOF callback and we can discuss AOF handling options here.
+
+(1) We can handle AOF rewrite by saving commands such as BF.RESERVE. With this, we will be able to re-create a Bloom Object with the same properties (expansion, capacity, false positive rate). However, the bits will not be set and when restored from the AOF, no items would "exist" (be set) on the bloom object. This can be considered data loss.
+
+This is not an issue with RDB Load and Save because we save the Bloom object's raw Bloom filter bit array data during RDB Save and we are able to restore this during RDB Load.
+
+(2) For AOF rewrite to support saving the exact state of the Bloom object (including the items that were "set"), we need to include the dump in the AOF and will need to support a command that can restore this data. ReBloom supports a BF.LOADCHUNK command to restore a bloom object in interations from its dump.
 
 
 ### Memory Management
