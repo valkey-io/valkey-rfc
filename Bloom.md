@@ -25,7 +25,7 @@ There is growing [demand](https://github.com/orgs/valkey-io/discussions?discussi
 
 The ValkeyBloom module brings in a bloom module data type into Valkey and provides commands to create / reserve bloom filters, operate on them (add items, check if items exist), inspect bloom filters, etc. It allows customization of properties of bloom filter (capacity, false positive rate, expansion rate, specification of scaling vs non-scaling filters etc) through commands and configurations. It also allows users to create scalable bloom filters and back up & restore bloom filters (through RDB load and save).
 
-ValkeyBloom provides commands (BF.*), configs, etc to operate on Bloom objects which are top-level structures containing lower-level BloomFilter provided by an external crate ValkeyBloom utilizes an open source (BSD-2) Bloom Filter Rust library around which it implements a scalable bloom filter.
+ValkeyBloom provides commands (BF.*), configs, etc to operate on Bloom objects which are top-level structures containing lower-level BloomFilter provided by an external crate. ValkeyBloom utilizes an open source (BSD-2) Bloom Filter Rust library around which it implements a scalable bloom filter.
 
 When a bloom filter is created, a bit array is created with a length proportional to the capacity (number of items the user wants to add to the filter) and hash functions are also created. The number of hash functions are controlled by the false positive rate that the user configures.
 
@@ -56,7 +56,7 @@ ValKeyBloom implements persistence related Module data type callbacks for the Bl
 * rdb_load: Deserializes bloom objects from RDB.
 * aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
 
-#### RDB Compatibility Strategy:
+### RDB Compatibility with ReBloom:
 
 During RDB Save of a bloom object, we will need to save the number of filters, expansion rate, false positive rate. And for every underlying bloom filter in this object, we store its hash keys used by hashing functions, number of hashing functions, number of bits of the bit array, bytes of the bit array itself.
 
@@ -66,7 +66,7 @@ Because of this, it is not possible to be RDB compatible with ReBloom. It might 
 
 For these reasons, ValkeyBloom is not RDB Compatible with ReBloom.
 
-#### AOF Rewrite handling:
+### AOF Rewrite handling:
 
 Module data types (including bloom) can implement a callback function that will be triggered for Bloom objects to rewrites its data as command/s. Currently, we have not yet implemented the AOF callback and we can discuss AOF handling options here.
 
@@ -107,11 +107,52 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
     valkey-cli psubscribe '__key*__:*'
 ```
 
-### Scalale filters / Non Scaling filters [WIP]
+### Scalable filters / Non Scaling filters
 
-Bloom Filters can either be configured as scalable (default) or non-scalable.
+Bloom Filters can either be configured as scalable (default) or non-scalable through specification with the BF.RESERVE or BF.INSERT command.
 
-### Choice of Bloom Filter Library [WIP]
+When non-scaling filters reach their capacity, if a user tries to add items to the bloom object, an error is returned.
+
+When scaling filters reach their capacity, if a user adds an item to the bloom object, a new bloom filter is created and added to the list of bloom filters within the same bloom object. This new bloom filter will have a larger capacity (previous bloom filter's capacity * expansion rate of the bloom object).
+
+When we want to check whether an item exists on a bloom object (BF.EXISTS/BF.MEXISTS), we look through each filter (from oldest to newest) in the object's filter list and perform a check operation on each one. Similarly, to add a new item to the bloom object, we check through all the filters to see if the item already exists and if not, the item is added to the current filter.
+
+When a bloom object has a larger number of bloom filters, it will result in reduced performance.
+
+Additionally, the default expansion rate is 2 and auto scaling of filters is enabled by default. The table below shows the total capacity (across all filters) when there are x additional (scaled out) filters.
+
+| x   | Capacity with x additional filters    |
+|-----|---------------------------------------|
+| 0   | 1                                     |
+| 1   | 3                                     |
+| 2   | 7                                     |
+| 3   | 15                                    |
+| 4   | 31                                    |
+| 5   | 63                                    |
+| 6   | 127                                   |
+| 7   | 255                                   |
+| 8   | 511                                   |
+| 9   | 1023                                  |
+| 10  | 2047                                  |
+| 15  | 65535                                 |
+| 20  | 2097151                               |
+| 25  | 67108863                              |
+| 30  | 2147483647                            |
+| 35  | 68719476735                           |
+| 40  | 2199023255551                         |
+| 45  | 70368744177663                        |
+| 50  | 2251799813685247                      |
+| 55  | 72057594037927934                     |
+| 60  | 2305843008139952126                   |
+| 65  | 73786976294838205662                  |
+| 70  | 2361183241434822608686                |
+| 75  | 75557862452714323477986               |
+| 100 | 2535301200456458804968143894986       |
+
+Practically, we can expect scaling to stop well before the 50-60 range.
+
+
+### Choice of Bloom Filter Library
 
 We evaluated the following libraries:
 * https://crates.io/crates/bloomfilter
@@ -126,12 +167,9 @@ Here are some important factors when evaluating libraries:
 
 https://crates.io/crates/bloomfilter was chosen as it provides all the required APIs for controlling a bloom filter. This library has also been stable through the releases.
 
-Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resuling in serialization / deserialization incompatibility. 
+Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resuling in serialization / deserialization incompatibility.
 
-
-
-### Max number of filters for scalable bloom filters [WIP]
-
+growable-bloom-filter is a bloom filter library that implements a scalable bloom filter. However, it does not allow control over when the scaling occurs and does not expose APIs to check the number of filters that it has scaled out to. This crate also has had a breaking change across versions and bloom filters of the older version are not loadable on the newer versions.
 
 
 ### Large BloomFilter objects
@@ -168,16 +206,16 @@ The reason for not implementing these two commands is because the Module provide
 
 Note: Based on the AOF Rewrite discussion, we will decide on whether these commands should be supported.
 
-### Configs [WIP]
+### Configs
 
 The default properties using which Bloom Filter objects are created can be controlled using configs.
 
 The following module configurations are added to customize bloom filters:
-1. bf.bloom_capacity: Controls the default capacity. When create operations (BF.ADD/MADD) are used, bloom objects will created will use the capacity specified by this config. This controls the number of items that can be added to a bloom filter object before it is scaled out (scaling) OR before it rejects add operations due to insufficient capacity on the object (nonscaling). 
-2. bf.bloom_expansion_rate: 
-3. bf.bloom_max_filters:
-4. bf.bloom_fp_rate:
-5. bf.bloom_large_item_threshold:
+1. bf.bloom_capacity: Controls the default capacity. When create operations (BF.ADD/MADD) are used, bloom objects created will use the capacity specified by this config. This controls the number of items that can be added to a bloom filter object before it is scaled out (scaling) OR before it rejects add operations due to insufficient capacity on the object (nonscaling).
+2. bf.bloom_expansion_rate: Controls the default expansion rate. When create operations (BF.ADD/MADD) are used, bloom objects created will use the expansion rate specified by this config. This controls the capacity of the new filter that gets added to the list of filters as a result of scaling.
+3. bf.bloom_max_filters: Controls the maximum number of filters that any bloom object is allowed to scale out to.
+4. bf.bloom_fp_rate: Controls the default false positive rate that new bloom objects created (from BF.ADD/MADD) will use.
+5. bf.bloom_large_item_threshold: Memory usage of a bloom object beyond which bloom objects are exempted from defrag and are forced to be async freed (when deleted).
 
 
 ### ACL
