@@ -3,76 +3,37 @@ RFC: 2
 Status: Proposed
 ---
 
-# ValKey JSON Module RFC
+# ValkeyJSON RFC
 
 ## Abstract
 
-The proposed ValKey JSON module supports the native JavaScript Object Notation (JSON) format to encode complex datasets inside 
-OSS ValKey. It is compliant with [RFC7159](http://www.ietf.org/rfc/rfc7159.txt) and [ECMA-404](http://www.ecma-international.org/publications/standards/Ecma-404.htm) 
+The proposed Valkey JSON module, named ValkeyJSON, supports the native JavaScript Object Notation (JSON) format to encode 
+complex datasets inside Valkey. It is compliant with [RFC7159](http://www.ietf.org/rfc/rfc7159.txt) and [ECMA-404](http://www.ecma-international.org/publications/standards/Ecma-404.htm) 
 JSON data interchange standard. With this feature, users can natively store, query, and modify JSON data structures in 
-ValKey using the popular [JSONPath query language](https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html). 
-The module should be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSON v2.
+Valkey using the popular [JSONPath query language](https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html). 
+To help users migrate from Redis and RedisJSON, and to capitalize on existing RedisJSON client libraries, the module 
+is designed to be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSON v2.
 
 ## Motivation
 
 JSON format is a widely used data exchange format and simplifies the development of applications that store complex data 
-structures by providing powerful searching and filtering capabilities. However, [ValKey core](https://github.com/valkey-io/valkey) 
+structures by providing powerful searching and filtering capabilities. However, [Valkey core](https://github.com/valkey-io/valkey) 
 does not have a native data type for JSON. Redis Ltd.‘s RedisJSON is a popular Redis modules, but not under a true 
-open source license and hence cannot be distributed freely with ValKey. There’s a demand in the ValKey 
+open source license and hence cannot be distributed freely with Valkey. There’s a demand in the Valkey 
 community to have a JSON module that matches most of the features of RedisJSON and is as API-compatible as possible. 
 See the community discussions [here](https://github.com/orgs/valkey-io/discussions?discussions_q=is%3Aopen+JSON).
 
 ## Design Considerations
 
-ValKey JSON module introduces a new JSON data type for ValKey, and commands to insert, update, delete and query JSON data. 
-The module should be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSON v2. Users can natively store, query, 
-and modify JSON data structures, either wholly or partially, using the popular [JSONPath query language](https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html).
+ValkeyJSON will introduce a new JSON data type for Valkey, and commands to insert, update, delete and query JSON data. 
+To help users migrate from Redis and RedisJSON, and to capitalize on existing RedisJSON client libraries, ValkeyJSON 
+aims to be a drop-in replacement of RedisJSON. Therefore, it is designed be API-compatible and RDB-compatible with 
+Redis Ltd.’s RedisJSON.
 
-![](./images/json_overview.png)
+### RDB Compatibility
 
-### Module OnLoad
-
-Upon loading, the module registers a new JSON data type. All operations such as query, insert, update and delete are 
-efficiently performed on the in-memory document objects, as opposed to JSON text.
-
-* Module name: json
-* JSON data type name: ReJSON-RL (Note: We use the same name as the one in RedisJSON for the sake of RDB compatibility.)
-
-### Persistence
-
-ValKey JSON module hooks into ValKey’s persistence API via the module type callbacks:
-
-* rdb_save: Serializes document objects to RDB. Serialized JSON string is saved in RDB.
-* rdb_load: Deserializes document objects from RDB.
-* aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
-
-### Memory Management
-
-The JSON data type also supports memory management related callbacks:
-
-* free: Deallocates a key when it is deleted, expired or evicted.
-* defrag: Supports active defrag for JSON keys
-* mem_usage: Reports JSON document size (AKA “memory usage” command)
-* copy: Supports copy of JSON key
-
-### Replication
-
-Every JSON write command is replicated to replicas.
-
-### Keyspace Event Notification
-
-Every JSON write command publishes a keyspace event after the data is mutated.
-* Event type: REDISMODULE_NOTIFY_GENERIC
-* Event name: command name in lowercase. e.g., json.set command publishes event "json.set".
-
-Users can subscribe to the JSON events via the standard keyspace event pub/sub. For example,
-
-```text
-1. enable keyspace event notifications:
-    valkey-cli config set notify-keyspace-events KEA
-2. suscribe to keyspace & keyevent event channels:
-    valkey-cli psubscribe '__key*__:*'
-```
+To help users migrate from Redis and RedisJSON, ValkeyJSON will support RDB compatibility with RedisJSON. ValkeyJSON can 
+load RDBs generated from RedisJSON. Likewise, RedisJSON can load RDBs generated from ValkeyJSON.
 
 ### Choice of JSON Library
 
@@ -85,6 +46,7 @@ rest, RapidJSON stands out as both memory efficient and providing efficient inse
 [JSONPath](https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html) is a query language for JSON with 
 features similar to XPath for XML. JSONPath is used for selecting and extracting elements from a JSON document. It 
 supports advanced query capabilities such as wildcard, filter expressions, slices, union, recursive search, etc.
+Using JSONPath query language, users can natively store, query, and modify JSON data structures, either wholly or partially.
 
 ![](./images/jsonpath_parser_design.png)
 
@@ -107,30 +69,8 @@ Member isWriteMode indicates READ/WRITE mode, which is automatically set based o
 which is getValues, setValues or deleteValues.
 
 Insert and update is implemented as a 2-phase operation that splits the write operation into two calls - prepareSetValues 
-and commit, where prepareSetValues does not change the ValKey data. The purpose of having a 2-phase write is to be able 
+and commit, where prepareSetValues does not change the Valkey data. The purpose of having a 2-phase write is to be able 
 to discard the write operation if certain conditions are not satisfied.
-
-### Root JSON Value
-
-In earlier RFC 4627, only objects or arrays were allowed as root values of JSON. Since [RFC 7159](http://www.ietf.org/rfc/rfc7159.txt), 
-the root value of a JSON document can be of any type, scalar type (String, Number, Boolean, Null) or container type (Array, Object). 
-ValKey JSON module is compliant with [RFC 7159](http://www.ietf.org/rfc/rfc7159.txt).
-
-### Document Size Limit
-
-JSON documents are stored internally in a format optimized for rapid access and modification. This format typically 
-results in consuming somewhat more memory than the equivalent serialized representation of the same document does. 
-The consumption of memory by a single JSON document is limited to 64MB by default, which is the size of the in-memory 
-data structure, not the serialized JSON string. The amount of memory consumed by a JSON document can be inspected by 
-using the “JSON.DEBUG MEMORY" or “MEMORY USAGE” command. “JSON.DEBUG MEMORY <key> [<path>]" can also report the size 
-of a JSON sub-tree.
-
-
-### Nesting Depth Limit
-
-When a JSON object or array has an element that is itself another JSON object or array, that inner object or array is 
-said to “nest” within the outer object or array. The nesting depth is limited to 128 by default. Any attempt to 
-create a document that contains a nesting depth greater than 128 will be rejected with an error message.
 
 ### Tokenization of JSON Object Keys
 
@@ -149,6 +89,12 @@ called KeyTable, which is a sharded hash table storing key tokens and reference 
 
 [RFC7159](http://www.ietf.org/rfc/rfc7159.txt) and [ECMA-404](http://www.ecma-international.org/publications/standards/Ecma-404.htm) 
 JSON data interchange standard is supported. UTF-8 Unicode in JSON text is supported.
+
+### Root JSON Value
+
+In earlier RFC 4627, only objects or arrays were allowed as root values of JSON. Since [RFC 7159](http://www.ietf.org/rfc/rfc7159.txt), 
+the root value of a JSON document can be of any type, scalar type (String, Number, Boolean, Null) or container type (Array, Object). 
+ValkeyJSON is compliant with [RFC 7159](http://www.ietf.org/rfc/rfc7159.txt).
 
 ### JSON Command API
 
@@ -171,7 +117,7 @@ For details and examples, see https://docs.aws.amazon.com/memorydb/latest/devgui
 
 ### ACL
 
-ValKey JSON module introduces a new ACL category - @json. The category has 22 JSON commands. No existing ValKey commands 
+ValkeyJSON introduces a new ACL category - @json. The category has 22 JSON commands. No existing Valkey commands 
 are members of the @json category. 
 
 There are 4 existing ACL categories which are updated to include new JSON commands: @read, @write, @fast, @slow. The 
@@ -192,6 +138,74 @@ Info metrics are visible through the “info json” or “info modules” comma
 ### Configs
 
 ![](./images/json_configs.png)
+
+### Document Size Limit
+
+JSON documents are stored internally in a format optimized for rapid access and modification. This format typically 
+results in consuming somewhat more memory than the equivalent serialized representation of the same document does. 
+The consumption of memory by a single JSON document is limited to 64MB by default, which is the size of the in-memory 
+data structure, not the serialized JSON string. The value can be overridden by module config json.max-document-size.
+
+The amount of memory consumed by a JSON document can be inspected by 
+using the “JSON.DEBUG MEMORY" or “MEMORY USAGE” command. “JSON.DEBUG MEMORY <key> [<path>]" can also report the size 
+of a JSON sub-tree.
+
+### Nesting Depth Limit
+
+When a JSON object or array has an element that is itself another JSON object or array, that inner object or array is 
+said to “nest” within the outer object or array. To avoid stack overflow, it's good to have a limit on the nesting depth.
+The default path limit is 128 levels. Any attempt to create a document that contains a nesting depth greater than 128 
+will be rejected with an error message. The value can be overridden by module config json.max-path-limit.
+
+### Module API
+
+ValkeyJSON integrates with Valkey core by implementing Valkey module API.
+
+![](./images/json_overview.png)
+
+#### Module OnLoad
+
+Upon loading, the module registers a new JSON data type. All operations such as query, insert, update and delete are 
+efficiently performed on the in-memory document objects, as opposed to JSON text.
+
+* Module name: json
+* JSON data type name: ReJSON-RL (Note: We use the same name as the one in RedisJSON for the sake of RDB compatibility.)
+
+#### Persistence
+
+ValkeyJSON hooks into Valkey’s persistence API via the module type callbacks:
+
+* rdb_save: Serializes document objects to RDB. Serialized JSON string is saved in RDB.
+* rdb_load: Deserializes document objects from RDB.
+* aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
+
+#### Memory Management
+
+The JSON data type also supports memory management related callbacks:
+
+* free: Deallocates a key when it is deleted, expired or evicted.
+* defrag: Supports active defrag for JSON keys
+* mem_usage: Reports JSON document size (AKA “memory usage” command)
+* copy: Supports copy of JSON key
+
+#### Keyspace Event Notification
+
+Every JSON write command publishes a keyspace event after the data is mutated.
+* Event type: REDISMODULE_NOTIFY_GENERIC
+* Event name: command name in lowercase. e.g., json.set command publishes event "json.set".
+
+Users can subscribe to the JSON events via the standard keyspace event pub/sub. For example,
+
+```text
+1. enable keyspace event notifications:
+    valkey-cli config set notify-keyspace-events KEA
+2. suscribe to keyspace & keyevent event channels:
+    valkey-cli psubscribe '__key*__:*'
+```
+
+#### Replication
+
+Every JSON write command is replicated to replicas by calling ValkeyModule_ReplicateVerbatim.
 
 ## References
 
