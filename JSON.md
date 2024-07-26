@@ -11,7 +11,7 @@ The proposed Valkey JSON module, named ValkeyJSON, supports the native JavaScrip
 complex datasets inside Valkey. It is compliant with [RFC7159](http://www.ietf.org/rfc/rfc7159.txt) and [ECMA-404](http://www.ecma-international.org/publications/standards/Ecma-404.htm) 
 JSON data interchange standard. With this feature, users can natively store, query, and modify JSON data structures in 
 Valkey using the popular [JSONPath query language](https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html). 
-To help users migrate from Redis and RedisJSON, and to capitalize on existing RedisJSON client libraries, the module 
+To help users migrate from Redis and RedisJSON, as well as capitalize on existing OSS RedisJSON client libraries, the module 
 is designed to be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSON v2.
 
 ## Motivation
@@ -26,14 +26,14 @@ See the community discussions [here](https://github.com/orgs/valkey-io/discussio
 ## Design Considerations
 
 ValkeyJSON will introduce a new JSON data type for Valkey, and commands to insert, update, delete and query JSON data. 
-To help users migrate from Redis and RedisJSON, and to capitalize on existing RedisJSON client libraries, ValkeyJSON 
+To help users migrate from Redis and RedisJSON, as well as capitalize on existing OSS RedisJSON client libraries, ValkeyJSON 
 aims to be a drop-in replacement of RedisJSON. Therefore, it is designed be API-compatible and RDB-compatible with 
 Redis Ltd.’s RedisJSON.
 
 ### RDB Compatibility
 
-To help users migrate from Redis and RedisJSON, ValkeyJSON will support RDB compatibility with RedisJSON. ValkeyJSON can 
-load RDBs generated from RedisJSON. Likewise, RedisJSON can load RDBs generated from ValkeyJSON.
+To help users migrate from Redis and RedisJSON, ValkeyJSON will support RDB compatibility with RedisJSON. ValkeyJSON will 
+be able to load RDBs generated from RedisJSON. Likewise, RedisJSON will be able to load RDBs generated from ValkeyJSON.
 
 ### Choice of JSON Library
 
