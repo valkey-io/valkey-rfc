@@ -32,13 +32,13 @@ When a bloom filter is created, a bit array is created with a length proportiona
 When a user adds an item (e.g. BF.ADD) to the filter, the item is passed through the filter and corresponding bit are set to 1. When a user checks whether an item exists on a filter (e.g. BF.EXISTS), the item is passed through the filters and if all the resolved bits have values as 1, we can say that the item exists with a false positive rate of X (specified by the user when creating the filter). If any of the bits are 0, the item does not exist and the BF.EXISTS operation will return 0.
 
 We have the following terminologies / properties:
-Bloom Object: The top level structure representing the data type. It contains meta data and a list of lower-level Bloom Filters (Implemented by an external crate) in case of scaling and a single lower-level bloom filter in case of non scaling.
-Bloom Filter: A single bloom filter (Implemented by an external crate).
-Capacity: The number of items we expect to add to a bloom filter. This controls the size of the filter.
-False Positive Rate: The accuracy the user expects when operating (set / check) on a filter. This controls the number of hash functions.
-Expansion Rate: This is used in scalable bloom filters where multiple bloom filters are stacked to allow users to continue using the same bloom object when it reaches capacity by adding another filter of larger capacity (expansion rate * prev filter capacity).
-Hash Functions: Hash functions used for bit check and set operations underneath.
-Hash Key: Keys used by the hashing function.
+* Bloom Object: The top level structure representing the data type. It contains meta data and a list of lower-level Bloom Filters (Implemented by an external crate) in case of scaling and a single lower-level bloom filter in case of non scaling.
+* Bloom Filter: A single bloom filter (Implemented by an external crate).
+* Capacity: The number of items we expect to add to a bloom filter. This controls the size of the filter.
+* False Positive Rate: The accuracy the user expects when operating (set / check) on a filter. This controls the number of hash functions.
+* Expansion Rate: This is used in scalable bloom filters where multiple bloom filters are stacked to allow users to continue using the same bloom object when it reaches capacity by adding another filter of larger capacity (expansion rate * prev filter capacity).
+* Hash Functions: Hash functions used for bit check and set operations underneath.
+* Hash Key: Keys used by the hashing function.
 
 
 ### Module OnLoad
@@ -232,6 +232,6 @@ Info metrics are visible through the “info bloom or “info modules” command
 
 
 ## References
-[ValkeyBloom GitHub Issue on the valkey project](https://github.com/valkey-io/valkey/issues/407)
-[ValkeyBloom GitHub Repo](https://github.com/KarthikSubbarao/valkey-bloom)
-[BloomFilter discussions on valkey-io](https://github.com/orgs/valkey-io/discussions?discussions_q=+bloom+)
+* [ValkeyBloom GitHub Issue on the valkey project](https://github.com/valkey-io/valkey/issues/407)
+* [ValkeyBloom GitHub Repo](https://github.com/KarthikSubbarao/valkey-bloom)
+* [BloomFilter discussions on valkey-io](https://github.com/orgs/valkey-io/discussions?discussions_q=+bloom+)
