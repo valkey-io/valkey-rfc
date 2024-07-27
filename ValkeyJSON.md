@@ -18,7 +18,7 @@ is designed to be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSO
 
 JSON format is a widely used data exchange format and simplifies the development of applications that store complex data 
 structures by providing powerful searching and filtering capabilities. However, [Valkey core](https://github.com/valkey-io/valkey) 
-does not have a native data type for JSON. Redis Ltd.‘s RedisJSON is a popular Redis modules, but not under a true 
+does not have a native data type for JSON. Redis Ltd.‘s RedisJSON is a popular Redis module, but not under a true 
 open source license and hence cannot be distributed freely with Valkey. There’s a demand in the Valkey 
 community to have a JSON module that matches most of the features of RedisJSON and is as API-compatible as possible. 
 See the community discussions [here](https://github.com/orgs/valkey-io/discussions?discussions_q=is%3Aopen+JSON).
@@ -58,7 +58,7 @@ multiple JSON values. RedisJSON v2 API is a superset of v1 API.
 
 We should extend RapidJSON to support a subset of the JSONPath query language that is compatible with RedisJSON v2 API. 
 To achieve this, we designed a JSONPath query parser that integrates with RapidJSON. It is a recursive descent parser 
-driven by LL(1) grammar. The core class is Selector, which glues everything together, and make the JSONPath query apply 
+driven by LL(1) grammar. The core class is Selector, which glues everything together, and makes the JSONPath query apply 
 to all CRUD operations. Internally, the Selector maintains two pointers. One points to the current position in the query 
 path string. The other points to the current node in the JSON tree. Based on what’s parsed so far, it takes actions to 
 traverse the tree or select target values.
@@ -68,7 +68,7 @@ v1 and v2 query syntax. It automatically detects if the query is of v1 or v2 syn
 Member isWriteMode indicates READ/WRITE mode, which is automatically set based on the entry point method being invoked, 
 which is getValues, setValues or deleteValues.
 
-Insert and update is implemented as a 2-phase operation that splits the write operation into two calls - prepareSetValues 
+Insert and update are implemented as a 2-phase operation that splits the write operation into two calls - prepareSetValues 
 and commit, where prepareSetValues does not change the Valkey data. The purpose of having a 2-phase write is to be able 
 to discard the write operation if certain conditions are not satisfied.
 
