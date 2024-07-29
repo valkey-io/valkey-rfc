@@ -70,12 +70,19 @@ For these reasons, ValkeyBloom is not RDB Compatible with ReBloom.
 
 Module data types (including bloom) can implement a callback function that will be triggered for Bloom objects to rewrites its data as command/s. Currently, we have not yet implemented the AOF callback and we can discuss AOF handling options here.
 
-(1) We can handle AOF rewrite by saving commands such as BF.RESERVE. With this, we will be able to re-create a Bloom Object with the same properties (expansion, capacity, false positive rate). However, the bits will not be set and when restored from the AOF, no items would "exist" (be set) on the bloom object. This can be considered data loss.
+1. We can handle AOF rewrite by saving commands such as BF.RESERVE. With this, we will be able to re-create a Bloom Object with the same properties (expansion, capacity, false positive rate). However, the bits will not be set and when restored from the AOF, no items would "exist" (be set) on the bloom object. This can be considered data loss.
 
 This is not an issue with RDB Load and Save because we save the Bloom object's raw Bloom filter bit array data during RDB Save and we are able to restore this during RDB Load.
 
-(2) For AOF rewrite to support saving the exact state of the Bloom object (including the items that were "set"), we need to include the dump in the AOF and will need to support a command that can restore this data. ReBloom supports a BF.LOADCHUNK command to restore a bloom object in interations from its dump.
+2. For AOF rewrite to support saving the exact state of the Bloom object (including the items that were "set"), we need to include the dump in the AOF and will need to support a command that can restore this data. ReBloom supports a BF.LOADCHUNK command to restore a bloom object in interations from its dump.
 
+### Migrating workloads from ReBloom:
+
+Customers that currently use ReBloom can move to ValkeyBloom using two approaches:
+
+1. Create the bloom filter objects to have the same properties using BF.RESERVE / BF.INSERT on Valkey (with ValkeyBloom loaded). Re-populate the bloom filter objects by inserting items by moving the existing bloom workload to the Valkey server (with ValkeyBloom loaded). The workload can be moved without any errors since we are API Compatible.
+
+2. Users can generate an AOF file from a server (that has the ReBloom module loaded) and with an on-going bloom workload that creates bloom filters & inserts items into them. Next, this can be re-played on a Valkey Server (with ValkeyBloom loaded). Then, the user can move their existing bloom workload to the Valkey server (with ValkeyBloom loaded).
 
 ### Memory Management
 
@@ -129,10 +136,6 @@ Additionally, the default expansion rate is 2 and auto scaling of filters is ena
 | 3   | 15                                    |
 | 4   | 31                                    |
 | 5   | 63                                    |
-| 6   | 127                                   |
-| 7   | 255                                   |
-| 8   | 511                                   |
-| 9   | 1023                                  |
 | 10  | 2047                                  |
 | 15  | 65535                                 |
 | 20  | 2097151                               |
