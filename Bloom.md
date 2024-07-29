@@ -126,7 +126,7 @@ When we want to check whether an item exists on a bloom object (BF.EXISTS/BF.MEX
 
 When a bloom object has a larger number of bloom filters, it will result in reduced performance.
 
-Additionally, the default expansion rate is 2 and auto scaling of filters is enabled by default. The table below shows the total capacity (across all filters) when there are x additional (scaled out) filters.
+Additionally, the default expansion rate is 2 and auto scaling of filters is enabled by default. The table below shows the total capacity (across all filters) when there are x additional (scaled out) filters and the starting filter has a capacity of 1.
 
 | x   | Capacity with x additional filters    |
 |-----|---------------------------------------|
@@ -152,7 +152,7 @@ Additionally, the default expansion rate is 2 and auto scaling of filters is ena
 | 75  | 75557862452714323477986               |
 | 100 | 2535301200456458804968143894986       |
 
-Practically, we can expect scaling to stop well before the 50-60 range.
+Practically, we can expect scaling to stop well before the 60 range; This is also getting closer to 64-bit unsigned integer limit.
 
 
 ### Choice of Bloom Filter Library
