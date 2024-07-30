@@ -841,7 +841,7 @@ Info metrics are visible through the “info json” or “info modules” comma
 
 ### Module API
 
-ValkeyJSON integrates with the Valkey core through Valkey module API callbacks or calls to the Valkey core.
+ValkeyJSON shall be implemented via the [Valkey modules API](https://valkey.io/topics/modules-intro/).
 
 #### Module OnLoad
 
