@@ -102,6 +102,66 @@ In earlier RFC 4627, only objects or arrays were allowed as root values of JSON.
 the root value of a JSON document can be of any type, scalar type (String, Number, Boolean, Null) or container type (Array, Object). 
 ValkeyJSON will be compliant with [RFC 7159](http://www.ietf.org/rfc/rfc7159.txt).
 
+### JSONPath Query Syntax
+
+ValkeyJSON supports two kinds of JSONPath query syntaxes:
+* Restricted syntax – Has limited query capabilities, compatible with RedisJSON v1.
+* Enhanced syntax – Follows the [Goessner-style](https://goessner.net/articles/JsonPath/) JSONPath query syntax, as shown in the table below.
+
+If a query path starts with '$', the enhanced syntax is used. Otherwise, the restricted syntax is used. A query using 
+the enhanced syntax always returns an array of values, while a restricted-syntax query always returns a single value. 
+
+Enhanced syntax:
+
+| Symbol/Expression | Description                                                              |
+|:------------------|:-------------------------------------------------------------------------|
+| $                 | the root element                                                         |
+| . or []           | child operator                                                           |
+| ..                | recursive descent                                                        |
+| *                 | wildcard. All elements in an object or array.                            |
+| []                | array subscript operator. Index is 0-based.                              |
+| [,]               | union operator                                                           |
+| [start:end:step]  | array slice operator                                                     |
+| ?()               | applies a filter expression to the current array or object               |                                                      |
+| @                 | used in filter expressions referring to the current node being processed |
+| ==                | equals to, used in filter expressions.                                   |
+| !=                | not equal to, used in filter expressions.                                |
+| >                 | greater than, used in filter expressions.                                |
+| >=                | greater than or equal to, used in filter expressions.                    |
+| <                 | less than, used in filter expressions.                                   |
+| <=                | less than or equal to, used in filter expressions.                       |
+| &&                | logical AND, used to combine multiple filter expressions.                |
+| &#124;&#124;      | logical OR, used to combine multiple filter expressions.                 |
+
+Examples:
+
+| JSONPath Expression                                           | Description                                 |
+|:--------------------------------------------------------------| :-----------                                |
+| $.store.book[*].author                                        | the authors of all books in the store       |
+| $..author                                                     | all authors                                 |
+| $.store.*                                                     | all members of the store                    |
+| $["store"].*                                                  | all members of the store                    |
+| $.store..price                                                | the price of everything in the store        |
+| $..*                                                          | all recursive members of the JSON structure |
+| $..book[*]                                                    | all books                                   |
+| $..book[0]                                                    | the first book                              |
+| $..book[-1]                                                   | the last book                               |
+| $..book[0:2]                                                  | the first two books                         |
+| $..book[0,1]                                                  | the first two books                         |
+| $..book[0:4]                                                  | books from index 0 to 3 (ending index is not inclusive) |
+| $..book[0:4:2]                                                | books at index 0, 2                         |
+| $..book[?(@.isbn)]                                            | all books with isbn number                  |
+| $..book[?(@.price<10)]                                        | all books cheaper than $10                  |
+| '$..book[?(@.price < 10)]'                                    | all books cheaper than $10. (The path must be quoted if it contains whitespaces) |
+| '$..book[?(@["price"] < 10)]'                                 | all books cheaper than $10             |
+| '$..book[?(@.["price"] < 10)]'                                | all books cheaper than $10             |
+| $..book[?(@.price>=10&&@.price<=100)]                         | all books in the price range of $10 to $100, inclusive |
+| '$..book[?(@.price>=10 && @.price<=100)]'                     | all books in the price range of $10 to $100, inclusive. (The path must be quoted if it contains whitespaces) |
+| $..book[?(@.sold==true&#124;&#124;@.in-stock==false)]         | all books sold or out of stock                         |
+| '$..book[?(@.sold == true &#124;&#124; @.in-stock == false)]' | all books sold or out of stock. (The path must be quoted if it contains whitespaces)                 |
+| '$.store.book[?(@.["category"] == "fiction")]'                | all books in the fiction category |
+| '$.store.book[?(@.["category"] != "fiction")]'                | all books in non-fiction categories |
+
 ### JSON Command API
 
 The API is compatible with RedisJSON v2. Note that API compatibility here means our command API is a superset of RedisJSON API. 
@@ -729,10 +789,9 @@ JSON.TYPE <key> [path]
     * Null if the document key does not exist.
     * Null if the JSON path is invalid or does not exist.
 
-
 ### ACL
 
-ValkeyJSON introduces a new ACL category - @json. The category has 22 JSON commands. No existing Valkey commands 
+ValkeyJSON introduces a new ACL category - @json. The category includes all JSON commands. No existing Valkey commands 
 are members of the @json category. 
 
 There are 4 existing ACL categories which are updated to include new JSON commands: @read, @write, @fast, @slow. The 
@@ -764,66 +823,6 @@ command must be added into that category. All other command members of those cat
 | JSON.TOGGLE    | y     |       | y      | y    |       |
 | JSON.TYPE      | y     | y     |        | y    |       |
 
-### JSONPath Query Syntax
-
-Two kinds of JSONPath query syntaxes are supported:
-* Restricted syntax – Has limited query capabilities, compatible with RedisJSON v1.
-* Enhanced syntax – Follows the [Goessner-style](https://goessner.net/articles/JsonPath/) JSONPath query syntax, as shown in the table below.
-
-If a query path starts with '$', the enhanced syntax is used. Otherwise, the restricted syntax is used. A query using 
-the enhanced syntax always returns an array of values, while a restricted-syntax query always returns a single value. 
-
-Enhanced syntax:
-
-| Symbol/Expression | Description                                                              |
-|:------------------|:-------------------------------------------------------------------------|
-| $                 | the root element                                                         |
-| . or []           | child operator                                                           |
-| ..                | recursive descent                                                        |
-| *                 | wildcard. All elements in an object or array.                            |
-| []                | array subscript operator. Index is 0-based.                              |
-| [,]               | union operator                                                           |
-| [start:end:step]  | array slice operator                                                     |
-| ?()               | applies a filter expression to the current array or object               |                                                      |
-| @                 | used in filter expressions referring to the current node being processed |
-| ==                | equals to, used in filter expressions.                                   |
-| !=                | not equal to, used in filter expressions.                                |
-| >                 | greater than, used in filter expressions.                                |
-| >=                | greater than or equal to, used in filter expressions.                    |
-| <                 | less than, used in filter expressions.                                   |
-| <=                | less than or equal to, used in filter expressions.                       |
-| &&                | logical AND, used to combine multiple filter expressions.                |
-| &#124;&#124;      | logical OR, used to combine multiple filter expressions.                 |
-
-Examples:
-
-| JSONPath Expression                                           | Description                                 |
-|:--------------------------------------------------------------| :-----------                                |
-| $.store.book[*].author                                        | the authors of all books in the store       |
-| $..author                                                     | all authors                                 |
-| $.store.*                                                     | all members of the store                    |
-| $["store"].*                                                  | all members of the store                    |
-| $.store..price                                                | the price of everything in the store        |
-| $..*                                                          | all recursive members of the JSON structure |
-| $..book[*]                                                    | all books                                   |
-| $..book[0]                                                    | the first book                              |
-| $..book[-1]                                                   | the last book                               |
-| $..book[0:2]                                                  | the first two books                         |
-| $..book[0,1]                                                  | the first two books                         |
-| $..book[0:4]                                                  | books from index 0 to 3 (ending index is not inclusive) |
-| $..book[0:4:2]                                                | books at index 0, 2                         |
-| $..book[?(@.isbn)]                                            | all books with isbn number                  |
-| $..book[?(@.price<10)]                                        | all books cheaper than $10                  |
-| '$..book[?(@.price < 10)]'                                    | all books cheaper than $10. (The path must be quoted if it contains whitespaces) |
-| '$..book[?(@["price"] < 10)]'                                 | all books cheaper than $10             |
-| '$..book[?(@.["price"] < 10)]'                                | all books cheaper than $10             |
-| $..book[?(@.price>=10&&@.price<=100)]                         | all books in the price range of $10 to $100, inclusive |
-| '$..book[?(@.price>=10 && @.price<=100)]'                     | all books in the price range of $10 to $100, inclusive. (The path must be quoted if it contains whitespaces) |
-| $..book[?(@.sold==true&#124;&#124;@.in-stock==false)]         | all books sold or out of stock                         |
-| '$..book[?(@.sold == true &#124;&#124; @.in-stock == false)]' | all books sold or out of stock. (The path must be quoted if it contains whitespaces)                 |
-| '$.store.book[?(@.["category"] == "fiction")]'                | all books in the fiction category |
-| '$.store.book[?(@.["category"] != "fiction")]'                | all books in non-fiction categories |
-
 ### Info Metrics
 
 Info metrics are visible through the “info json” or “info modules” command.
@@ -833,7 +832,7 @@ Info metrics are visible through the “info json” or “info modules” comma
 | json_total_memory_bytes | Total amount of memory allocated to JSON documents and meta data. |
 | json_num_documents      | Number of JSON keys.                                              | 
 
-### Configs
+### Module Configs
 
 | Config Name            | Default Value | Unit | 	Description                                          |
 |:-----------------------|:--------------|:-----|:------------------------------------------------------|
