@@ -122,7 +122,7 @@ Enhanced syntax:
 | []                | array subscript operator. Index is 0-based.                              |
 | [,]               | union operator                                                           |
 | [start:end:step]  | array slice operator                                                     |
-| ?()               | applies a filter expression to the current array or object               |                                                      |
+| ?()               | applies a filter expression to the current array or object               |
 | @                 | used in filter expressions referring to the current node being processed |
 | ==                | equals to, used in filter expressions.                                   |
 | !=                | not equal to, used in filter expressions.                                |
