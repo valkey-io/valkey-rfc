@@ -3,11 +3,11 @@ RFC: 4
 Status: Proposed
 ---
 
-# ValKeyBloom Module RFC
+# ValkeyBloom Module RFC
 
 ## Abstract
 
-The proposed feature is ValKeyBloom which is a Rust based Module that brings a native bloom filter data type into Valkey.
+The proposed feature is ValkeyBloom which is a Rust based Module that brings a native bloom filter data type into Valkey.
 The module should be API-compatible with Redis Ltd.’s ReBloom Module.
 
 ## Motivation
@@ -50,7 +50,7 @@ Upon loading, the module registers a new bloom module based data type, creates b
 
 ### Persistence
 
-ValKeyBloom implements persistence related Module data type callbacks for the Bloom data type:
+ValkeyBloom implements persistence related Module data type callbacks for the Bloom data type:
 
 * rdb_save: Serializes bloom objects to RDB.
 * rdb_load: Deserializes bloom objects from RDB.
