@@ -66,7 +66,7 @@ v1 or v2 syntax.
 
 JSON has two container types - Array and Object. The JSON Object is a key/value mapping where keys are restricted to 
 be strings, whereas the value can be any valid JSON value, including another container value. Thus, a single JSON document 
-can contain multiple JSON objects, each with its own unique namespace. It’s quite common that a key repeatedly appears 
+can contain multiple JSON objects, each with its own unique namespace. It's quite common that a key repeatedly appears 
 in the same JSON document or across documents. If the number of JSON documents is large, repeated key names can consume 
 a significant amount of memory usage.
 
