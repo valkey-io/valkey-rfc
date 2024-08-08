@@ -177,7 +177,7 @@ Append one or more values to the array values at the path.
 JSON.ARRAPPEND <key> <path> <json> [json ...]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - required, a JSON path
 * json - required, JSON value to be appended to the array
 
@@ -209,7 +209,7 @@ Search for the first occurrence of a scalar JSON value in the arrays at the path
 JSON.ARRINDEX <key> <path> <json-scalar> [start [end]]
 ```
 
-* key - required, Redis key of document type.
+* key - required, JSON key.
 * path - required, a JSON path.
 * json-scalar - required, scalar value to search for. JSON scalar refers to values that are not objects or arrays.
   i.e., String, number, boolean and null are scalar values.
@@ -242,7 +242,7 @@ Insert one or more values into the array values at path before the index.
 JSON.ARRINSERT <key> <path> <index> <json> [json ...]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - required, a JSON path
 * index - required, array index before which values are inserted.
 * json - required, JSON value to be appended to the array
@@ -270,7 +270,7 @@ Get length of the array values at the path.
 JSON.ARRLEN <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -297,8 +297,8 @@ Remove and return element at the index from the array. Popping an empty array re
 JSON.ARRPOP <key> [path [index]]
 ```
 
-* key - required, Redis key of document type
-* path - optional, a JSON path. Defaults to the root path if not provided
+* key - required, JSON key.
+* path - optional, a JSON path. Defaults to the root path if not provided.
 * index - optional, position in the array to start popping from.
     * Defaults -1 if not provided, which means the last element.
     * Negative value means position from the last element.
@@ -331,7 +331,7 @@ Trim arrays at the path so that it becomes subarray [start, end], both inclusive
 JSON.ARRTRIM <key> <path> <start> <end>
 ```
 
-* key - required, Redis key of document type.
+* key - required, JSON key.
 * path - required, a JSON path.
 * start - required, start index, inclusive.
 * end - required, end index, inclusive.
@@ -360,8 +360,8 @@ Clear the arrays or an objects at the path.
 JSON.CLEAR <key> <path>
 ```
 
-* key - required, Redis key of document type.
-* path - optional, a JSON path. Defaults to the root path if not provided
+* key - required, JSON key.
+* path - optional, a JSON path. Defaults to the root path if not provided.
 
 ##### Return
 
@@ -394,27 +394,27 @@ Depends on the subcommand:
 * MEMORY
     * If the path is enhanced syntax:
         * returns an array of integers, representing memory size (in bytes) of JSON value at each path.
-        * returns an empty array if the Redis key does not exist.
+        * returns an empty array if the JSON key does not exist.
     * If the path is restricted syntax:
         * returns an integer, memory size the JSON value in bytes.
-        * returns null if the Redis key does not exist.
+        * returns null if the JSON key does not exist.
 * DEPTH
     * returns an integer, the maximum path depth of the JSON document.
-    * returns null if the Redis key does not exist.
+    * returns null if the JSON key does not exist.
 * FIELDS
     * If the path is enhanced syntax:
         * returns an array of integers, representing number of fields of JSON value at each path.
-        * returns an empty array if the Redis key does not exist.
+        * returns an empty array if the JSON key does not exist.
     * If the path is restricted syntax:
         * returns an integer, number of fields of the JSON value.
-        * returns null if the Redis key does not exist.
+        * returns null if the JSON key does not exist.
 * HELP
     * returns an array of help messages
 
 #### JSON.DEL
 
-Delete the JSON values at the path in a document key. If the path is the root path, it is equivalent to deleting
-the key from Redis.
+Delete the JSON values at the path in a JSON key. If the path is the root path, it is equivalent to deleting
+the key from Valkey.
 
 ##### Syntax
 
@@ -422,13 +422,13 @@ the key from Redis.
 JSON.DEL <key> [path]
 ```
 
-* key - required, Redis key of document type
-* path - optional, a JSON path. Defaults to the root path if not provided
+* key - required, JSON key.
+* path - optional, a JSON path. Defaults to the root path if not provided.
 
 ##### Return
 
 * Number of elements deleted.
-* 0 if the Redis key does not exist.
+* 0 if the JSON key does not exist.
 * 0 if the JSON path is invalid or does not exist.
 
 #### JSON.FORGET
@@ -449,7 +449,7 @@ JSON.GET <key>
          [path ...]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key.
 * INDENT/NEWLINE/SPACE - optional, controls the format of the returned JSON string, i.e., "pretty print". The default
   value of each one is empty string. They can be overidden in any combination. They can be specified in any order.
 * NOESCAPE - optional, allowed to be present for legacy compatibility and has no other effect.
@@ -487,8 +487,8 @@ Get serialized JSONs at the path from multiple document keys. Return null for no
 JSON.MGET <key> [key ...] <path>
 ```
 
-* key - required, one or more Redis keys of document type
-* path - required, a JSON path
+* key - required, one or more JSON keys.
+* path - required, a JSON path.
 
 ##### Return
 
@@ -496,6 +496,25 @@ JSON.MGET <key> [key ...] <path>
   is populated with either (a) the serialized JSON as located by the path or (b) Null if the key does not exist or the
   path does not exist in the document or the path is invalid (syntax error).
 * If any of the specified keys exists and is not a JSON key, the command returns WRONGTYPE error.
+
+#### JSON.MSET
+
+Set JSON values for multiple keys. The operation is atomic. Either all values are set or none is set.
+
+##### Syntax
+
+```bash
+JSON.MSET <key> <path> <value> [key <path> <value> ...]
+```
+
+* key - required, JSON key
+* path - required, a JSON path
+* value - JSON value
+
+##### Return
+
+* Simple String 'OK' on success
+* Error on failure
 
 #### JSON.NUMINCRBY
 
@@ -507,7 +526,7 @@ Increment the number values at the path by a given number.
 JSON.NUMINCRBY <key> <path> <number>
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - required, a JSON path
 * number - required, a number
 
@@ -538,7 +557,7 @@ Multiply the number values at the path by a given number.
 JSON.NUMMULTBY <key> <path> <number>
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - required, a JSON path
 * number - required, a number
 
@@ -569,7 +588,7 @@ Get number of keys in the object values at the path.
 JSON.OBJLEN <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -596,7 +615,7 @@ Get key names in the object values at the path.
 JSON.OBJKEYS <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -633,7 +652,7 @@ If the value is container, the response is RESP array or nested array.
 ```bash
 JSON.RESP <key> [path]
 ```
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -670,12 +689,12 @@ Set JSON values at the path.
 JSON.SET <key> <path> <json> [NX | XX]
 ```
 
-* key - required, Redis key of document type.
-* path - required, JSON path. For a new Redis key, the JSON path must be the root path ".".
+* key - required, JSON key.
+* path - required, JSON path. For a new JSON key, the JSON path must be the root path ".".
 * json - required, JSON representing the new value
-* NX - optional. If the path is the root path, set the value only if the Redis key does not exist, i.e., insert a new document.
+* NX - optional. If the path is the root path, set the value only if the JSON key does not exist, i.e., insert a new document.
   If the path is not the root path, set the value only if the path does not exist, i.e., insert a value into the document.
-* XX - optional. If the path is the root path, set the value only if the Redis key exists, i.e., replace the existing document.
+* XX - optional. If the path is the root path, set the value only if the JSON key exists, i.e., replace the existing document.
   If the path is not the root path, set the value only if the path exists, i.e., update the existing value.
 
 ##### Return
@@ -693,8 +712,8 @@ Append a string to the JSON strings at the path.
 JSON.STRAPPEND <key> [path] <json_string>
 ```
 
-* key - required, Redis key of document type
-* path - optional, a JSON path. Defaults to the root path if not provided
+* key - required, JSON key.
+* path - optional, a JSON path. Defaults to the root path if not provided.
 * json_string - required, JSON representation of a string. Note that a JSON string must be quoted, i.e., '"foo"'.
 
 ##### Return
@@ -722,7 +741,7 @@ Get lengths of the JSON string values at the path.
 JSON.STRLEN <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -749,7 +768,7 @@ Toggle boolean values between true and false at the path.
 JSON.TOGGLE <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -774,7 +793,7 @@ Report type of the values at the given path.
 JSON.TYPE <key> [path]
 ```
 
-* key - required, Redis key of document type
+* key - required, JSON key
 * path - optional, a JSON path. Defaults to the root path if not provided
 
 ##### Return
@@ -799,29 +818,30 @@ table below has a column for each of these categories and a row for each command
 command must be added into that category. All other command members of those categories remain unchanged.
 
 | JSON Command   | @json | @read | @write | @fast | @slow |
-|:---------------|:------|:------|:-------|:-----|:------|
-| JSON.ARRAPPEND | y     |       | y      | y    |       |
-| JSON.ARRINDEX  | y     | y     |        | y    |       |
-| JSON.ARRINSERT | y     |       | y      | y    |       |
-| JSON.ARRLEN    | y     | y     |        | y    |       |
-| JSON.ARRPOP    | y     |       | y      | y    |       |
-| JSON.ARRTRIM   | y     |       | y      | y    |       |
-| JSON.CLEAR     | y     |       | y      | y    |       |
-| JSON.DEBUG     | y     | y     |        |      | y     |
-| JSON.DEL       | y     |       | y      | y    |       |
-| JSON.FORGET    | y     |       | y      | y    |       |
-| JSON.GET       | y     | y     |        | y    |       |
-| JSON.MGET      | y     | y     |        | y    |       |
-| JSON.NUMINCRBY | y     |       | y      | y    |       |
-| JSON.NUMMULTBY | y     |       | y      | y    |       |
-| JSON.OBJKEYS   | y     | y     |        | y    |       |
-| JSON.OBJLEN    | y     | y     |        | y    |       |
-| JSON.RESP      | y     | y     |        | y    |       |
-| JSON.SET       | y     |       | y      |      | y     |
-| JSON.STRAPPEND | y     |       | y      | y    |       |
-| JSON.STRLEN    | y     | y     |        | y    |       |
-| JSON.TOGGLE    | y     |       | y      | y    |       |
-| JSON.TYPE      | y     | y     |        | y    |       |
+|:---------------|:------|:------|:-------|:------|:------|
+| JSON.ARRAPPEND | y     |       | y      | y     |       |
+| JSON.ARRINDEX  | y     | y     |        | y     |       |
+| JSON.ARRINSERT | y     |       | y      | y     |       |
+| JSON.ARRLEN    | y     | y     |        | y     |       |
+| JSON.ARRPOP    | y     |       | y      | y     |       |
+| JSON.ARRTRIM   | y     |       | y      | y     |       |
+| JSON.CLEAR     | y     |       | y      | y     |       |
+| JSON.DEBUG     | y     | y     |        |       | y     |
+| JSON.DEL       | y     |       | y      | y     |       |
+| JSON.FORGET    | y     |       | y      | y     |       |
+| JSON.GET       | y     | y     |        | y     |       |
+| JSON.MGET      | y     | y     |        | y     |       |
+| JSON.MSET      | y     |       | y      |       | y     |
+| JSON.NUMINCRBY | y     |       | y      | y     |       |
+| JSON.NUMMULTBY | y     |       | y      | y     |       |
+| JSON.OBJKEYS   | y     | y     |        | y     |       |
+| JSON.OBJLEN    | y     | y     |        | y     |       |
+| JSON.RESP      | y     | y     |        | y     |       |
+| JSON.SET       | y     |       | y      |       | y     |
+| JSON.STRAPPEND | y     |       | y      | y     |       |
+| JSON.STRLEN    | y     | y     |        | y     |       |
+| JSON.TOGGLE    | y     |       | y      | y     |       |
+| JSON.TYPE      | y     | y     |        | y     |       |
 
 ### Info Metrics
 
