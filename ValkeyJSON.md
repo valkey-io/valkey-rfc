@@ -873,7 +873,7 @@ efficiently performed on the in-memory document objects, as opposed to JSON text
 
 #### Persistence
 
-ValkeyJSON hooks into Valkey’s persistence API via the module type callbacks:
+ValkeyJSON hooks into Valkey's persistence API via the module type callbacks:
 
 * rdb_save: Serializes document objects to RDB. Serialized JSON string is saved in RDB.
 * rdb_load: Deserializes document objects from RDB.
