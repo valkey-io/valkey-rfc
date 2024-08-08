@@ -19,7 +19,7 @@ is designed to be API-compatible and RDB-compatible with Redis Ltd.’s RedisJSO
 JSON format is a widely used data exchange format and simplifies the development of applications that store complex data 
 structures by providing powerful searching and filtering capabilities. However, [Valkey core](https://github.com/valkey-io/valkey) 
 does not have a native data type for JSON. Redis Ltd.‘s RedisJSON is a popular Redis module, but not under a true 
-open source license and hence cannot be distributed freely with Valkey. There’s a demand in the Valkey 
+open source license and hence cannot be distributed freely with Valkey. There's a demand in the Valkey 
 community to have a JSON module that matches most of the features of RedisJSON and is as API-compatible as possible. 
 See the community discussions [here](https://github.com/orgs/valkey-io/discussions?discussions_q=is%3Aopen+JSON).
 
