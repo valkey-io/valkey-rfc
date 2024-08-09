@@ -154,13 +154,20 @@ The bloom data type also supports memory management related callbacks:
 
 ### Replication
 
-Every Bloom Filter based write command will be replicated to replica nodes.
+Every Bloom Filter based write operation (bloom object creations, scaling, setting of an item on a filter which returns 1
+indicating a new entry, etc) will be replicated to replica nodes. Attempts of adding an already existing item to a bloom
+object (which returns 0) will not replicated.
 
 ### Keyspace Event Notification
 
-Every bloom filter based write command will be made to publish a keyspace event after the data is mutated.
+Every bloom filter based write command (that involves mutation as explained in the section above) will be made to publish
+a keyspace event after the data is mutated. Commands include: BF.RESERVE, BF.ADD, BD.MADD, and BF.INSERT.
+
 * Event type: VALKEYMODULE_NOTIFY_GENERIC
-* Event name: command name in lowercase. e.g., BF.ADD command publishes event "bloom.add".
+* Event name: One of the two event names will be published based on the command & scenario:
+ * bloom.add: Any BF.ADD, BF.MADD, or BF.INSERT command that results in adding item/s to a bloom object.
+ * bloom.reserve: Any BF.ADD, BF.MADD, BF.INSERT, or BF.RESERVE command that results in creation of a bloom object.
+
 
 Users can subscribe to the bloom events via the standard keyspace event pub/sub. For example,
 
@@ -171,11 +178,19 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
     valkey-cli psubscribe '__key*__:*'
 ```
 
-### Scalable filters / Non Scaling filters
+### Non Scalable filters
+
+When non-scaling filters reach their capacity, if a user tries to add items to the bloom object, an error is returned. This
+default behavior is based on ReBloom. This helps keep the false positve error rate of the Bloom object to be what the user
+requested when creating the bloom object.
+
+A configuration can be used to provide an alternative behavior of allowing bloom objects to be saturated by allowing add
+operations (BF.ADD/BF.MADD/BF.INSERT) to continue without being rejected even when a filter is at full capacity. This will
+increase the false positve error rate, but a user can opt into this behavior to allow add operations to "succeed".
+
+### Scalable filters
 
 Bloom Filters can either be configured as scalable (default) or non-scalable through specification with the BF.RESERVE or BF.INSERT command.
-
-When non-scaling filters reach their capacity, if a user tries to add items to the bloom object, an error is returned.
 
 When scaling filters reach their capacity, if a user adds an item to the bloom object, a new bloom filter is created and
 added to the list of bloom filters within the same bloom object. This new bloom filter will have a larger capacity
@@ -254,8 +269,10 @@ Because of this, the following operations can be handled differently:
     defrag operations on this bloom object.
 * free_effort callback: This callback decides the free effort for the bloom object. If it is greater than X MB
     (configurable with `bf.bloom_large_item_threshold`), we can return 0 to use async free logic.
-* create operations (BF.ADD/MADD/INSERT): We can compute the estimated size of the bloom filter that will be created as
-    a result of the operation. We can consider rejecting requests in case of unavailable memory.
+* create operations (BF.ADD/MADD/INSERT/RESERVE): We can compute the estimated size of the bloom filter that will be created as
+    a result of the operation and we can consider rejecting requests in case of unavailable memory. Scalable Bloom filters
+    will grow in used memory after creation - but only as a result of a BF.ADD, BF.MADD, or BF.INSERT operation and we can reject
+    these requests if we identify that it will result in a scale out operation that requires more memory than what is available.
 
 
 ## Specification
@@ -285,7 +302,7 @@ but since we will provide RDB save & load, having specific commands for the same
 
 Note: Based on the AOF Rewrite discussion, we will decide on whether these commands should be supported.
 
-### Configs
+### Configurations
 
 The default properties using which Bloom Filter objects are created can be controlled using configs.
 
@@ -298,8 +315,10 @@ The following module configurations are added to customize bloom filters:
     that gets added to the list of filters as a result of scaling.
 3. bf.bloom_max_filters: Controls the maximum number of filters that any bloom object is allowed to scale out to.
 4. bf.bloom_fp_rate: Controls the default false positive rate that new bloom objects created (from BF.ADD/MADD) will use.
-5. bf.bloom_large_item_threshold: Memory usage of a bloom object beyond which bloom objects are exempted from defrag and
-    are forced to be async freed (when deleted).
+
+### Constants
+1. bf.bloom_large_item_threshold: Memory usage of a bloom object beyond which bloom objects are exempted from defrag operations
+    and when deleted, the Module will indicate the object's free_effort as 0 to be async freed.
 
 
 ### ACL
