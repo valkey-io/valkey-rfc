@@ -907,6 +907,14 @@ Users can subscribe to the JSON events via the standard keyspace event pub/sub. 
 
 Every JSON write command is replicated to replicas by calling ValkeyModule_ReplicateVerbatim.
 
+## Open Questions
+
+### Regarding the Document Size Limit
+We are considering a review feedback of not enforcing document size limit, because RedisJSON doesn't have the limit and Valkey 
+core data types don't have limits either. There could be two options:
+1. Make the default value of json.max-document-size 0 or -1, meaning unlimited.
+2. Remove the config.
+
 ## References
 
 * [JSON Command API](https://docs.aws.amazon.com/memorydb/latest/devguide/json-list-commands.html)
