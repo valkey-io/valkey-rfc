@@ -847,14 +847,14 @@ command must be added into that category. All other command members of those cat
 
 Info metrics are visible through the “info json” or “info modules” command.
 
-| Info Name               | 	Description                                                    |
+| Info Name               | 	Description                                                   |
 |:------------------------|:------------------------------------------------------------------|
 | json_total_memory_bytes | Total amount of memory allocated to JSON documents and meta data. |
 | json_num_documents      | Number of JSON keys.                                              | 
 
 ### Module Configs
 
-| Config Name            | Default Value | Unit | 	Description                                          |
+| Config Name            | Default Value | Unit | 	Description                                         |
 |:-----------------------|:--------------|:-----|:------------------------------------------------------|
 | json.max-document-size | 64            | MB   | Maximum memory allowed for a single JSON document.    |
 | josn.max-path-limit    | 128           |      | Maximum nesting levels within a single JSON document. |
