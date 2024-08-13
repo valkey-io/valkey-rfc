@@ -51,7 +51,7 @@ If there is any special handling for this feature (e.g., client redirection, Sha
 
 ### Module API (Optional)
 
-If any module API is modified or introduced to support dynamic libraries.
+If any new module APIs are needed to implement or support this feature.
 
 ### RDB (Optional)
 
@@ -83,7 +83,7 @@ If there are any test scenarios planned out to support the feature's stability a
 
 ### Debug mechanism (Optional)
 
-If there is any debug mechanism introduced to support admin/operators for further maintaining the feature.
+If there is any debug mechanism introduced to support admin/operators for maintaining the feature.
 
 ## Appendix (Optional)
 
