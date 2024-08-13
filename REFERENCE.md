@@ -47,7 +47,7 @@ If there are any events to be introduced or modified to observe activity around 
 
 ### Cluster mode (Optional)
 
-If there are any changes introduced for cluster mode related activities like cluster bus protocol change, slot migration, etc.
+If there is any special handling for this feature in cluster mode, list out the behavior. e.g., client redirection, Sharded PubSub, etc behaves differently in cluster mode.
 
 ### Module API (Optional)
 
