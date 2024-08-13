@@ -1,4 +1,3 @@
-
 ---
 RFC: <PR number>
 Status: <Proposed>
@@ -24,67 +23,67 @@ A more detailed description of the feature, including why certain details in the
 
 ### Commands (Optional)
 
-If any new commands are introduced.
+If any new commands are introduced:
 
 1. Command name
-**Request**
-**Response**
+   - **Request**
+   - **Response**
 
 ### Authentication and Authorization (Optional)
 
-If any changes are around authentication and authorization (ACL) access for commands/keyspace/channels.
+If there are any changes around authentication and authorization (ACL) access for commands/keyspace/channels.
 
-### Append only file (Optional)
+### Append-only file (Optional)
 
-If any changes are introduced around persistence mechanism of every write operation.
+If there are any changes around the persistence mechanism of every write operation.
 
 ### Configuration (Optional)
 
-If any configuration changes are introduced to enable/disable/modify the behavior of the feature.
+If there are any configuration changes introduced to enable/disable/modify the behavior of the feature.
 
 ### Keyspace notifications (Optional)
 
-If any event to be introduced or modified to observe activity around the dataset.
+If there are any events to be introduced or modified to observe activity around the dataset.
 
 ### Cluster mode (Optional)
 
-If any change introduced for cluster mode related activity like cluster bus protocol change,slot migration, etc.
+If there are any changes introduced for cluster mode related activities like cluster bus protocol change, slot migration, etc.
 
 ### Module API (Optional)
 
-If there any module API modified or introduced to support dynamic libraries.
+If any module API is modified or introduced to support dynamic libraries.
 
 ### RDB (Optional)
 
-If any changes in snapshotting mechanism like new data type, version, etc.
+If there are any changes in snapshotting mechanisms like new data type, version, etc.
 
 ### Replication (Optional)
 
-If any changes required in replication mechanism between a primary and replica.
+If there are any changes required in the replication mechanism between a primary and replica.
 
 ### Networking (Optional)
 
-If any changes introduced in RESP protocol (RESP), client behavior, new server client interaction mechanism (TCP, RDMA), etc.
+If there are any changes introduced in the RESP protocol (RESP), client behavior, new server-client interaction mechanism (TCP, RDMA), etc.
 
 ### Dependencies (Optional)
 
-If any new dependency libraries required to support the feature. Existing dependencies are jemalloc, lua, etc.
+If there are any new dependency libraries required to support the feature. Existing dependencies are jemalloc, lua, etc.
 
 ### Metrics (Optional)
 
-If any new metrics to be introduced to observe behavior or measure performance of the feature.
+If there are any new metrics to be introduced to observe behavior or measure the performance of the feature.
 
 ### Benchmarking (Optional)
 
-If any benchmark performed and preliminary results are available to share or set of scenario identified to measure the feature performance.
+If there are any benchmarks performed and preliminary results are available to share or a set of scenarios identified to measure the feature's performance.
 
 ### Testing (Optional)
 
-If any test scenario planned out to support the feature stability and validate behavior.
+If there are any test scenarios planned out to support the feature's stability and validate behavior.
 
 ### Debug mechanism (Optional)
 
-If any debug mechanism introduced to support admin/operators for further maintaining the feature.
+If there is any debug mechanism introduced to support admin/operators for further maintaining the feature.
 
 ## Appendix (Optional)
 
