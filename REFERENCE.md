@@ -47,7 +47,7 @@ If there are any events to be introduced or modified to observe activity around 
 
 ### Cluster mode (Optional)
 
-If there is any special handling for this feature in cluster mode, list out the behavior. e.g., client redirection, Sharded PubSub, etc behaves differently in cluster mode.
+If there is any special handling for this feature (e.g., client redirection, Sharded PubSub, etc) in cluster mode, list out the behavior.
 
 ### Module API (Optional)
 
