@@ -37,16 +37,4 @@ be referred to by their respective pull-request numbers.
 What's useful to include?
 -------------------------
 
-The Valkey RFC format is not a strict format, but should include the following
-sections unless they are unnecessary for the proposal you are submitting.
-
-* Status and RFC number (the pull-request number).
-* Abstract. A few sentences describing the feature.
-* Motivation. What the feature solves and why the existing functionality is not
-  enough.
-* Design considerations. A description of the design constraints and
-  requirements for the proposal. Comparisons with similar features in other
-  projects.
-* Specification. A more detailed description of the feature, including why
-  certain details in the design have been chosen.
-* Links to related material such as issues, pull requests, papers, or other references.
+The Valkey RFC format is not a strict format, but should include details about various aspect of the engine, unless they are unnecessary for the proposal you are submitting. Here's the [reference RFC template](REFERENCE.md) to get started.
