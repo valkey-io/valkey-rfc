@@ -17,7 +17,8 @@ We want to let adminstrator connect to this admin port to do some special things
 
 Beside above mentioned, we could implement the following features in the future:
 1. The connections through admin port are not limited to maxclient number, we can always guarantee they can connect to the server.
-2. Some status check commands could be sent and receied through admin port, we can do some special logic to make sure they have opportunity to be handle first
+2. Some status check commands could be sent and receied through admin port, we can do some special logic to make sure they have opportunity to be handle first, such as:
+   PING, HELLO, ECHO, INFO etc
 
 
 ## Design Considerations
