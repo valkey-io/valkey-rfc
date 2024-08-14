@@ -31,7 +31,7 @@ If any new commands are introduced:
 
 ### Authentication and Authorization (Optional)
 
-If there are any changes around authentication and authorization (ACL) access for commands/keyspace/channels.
+If there are any changes around introducing new ACL command/categories for user access control.
 
 ### Append-only file (Optional)
 
