@@ -12,8 +12,8 @@ The module should be API-compatible with Redis Ltd.’s ReBloom Module.
 
 ## Motivation
 
-Bloom filters are a space efficient probabilistic data structure that can be used to “check” whether an element exists in
-a set (with a defined false positive), and to “add” elements to a set. While checking whether an item exists, false positives
+Bloom filters are a space efficient probabilistic data structure that can be used to "check" whether an element exists in
+a set (with a defined false positive), and to "add" elements to a set. While checking whether an item exists, false positives
 are possible, but false negatives are not possible. https://en.wikipedia.org/wiki/Bloom_filter
 
 To utilize Bloom filters in their client applications, users today use client libraries that are compatible with the ReBloom
@@ -43,9 +43,9 @@ When a bloom filter is created, a bit array is created with a length proportiona
 wants to add to the filter) and hash functions are also created. The number of hash functions are controlled by the
 false positive rate that the user configures.
 
-When a user adds an item (e.g. BF.ADD) to the filter, the item is passed through the filter and corresponding bit are set
-to 1. When a user checks whether an item exists on a filter (e.g. BF.EXISTS), the item is passed through the filters
-and if all the resolved bits have values as 1, we can say that the item exists with a false positive rate of
+When a user adds an item (e.g. BF.ADD) to the filter, the item is passed through the hash functions and the corresponding
+bits are set to 1. When a user checks whether an item exists on a filter (e.g. BF.EXISTS), the item is passed through the
+filters and if all the resolved bits have values as 1, we can say that the item exists with a false positive rate of
 X (specified by the user when creating the filter). If any of the bits are 0, the item does not exist and the BF.EXISTS
 operation will return 0.
 
@@ -66,7 +66,7 @@ We have the following terminologies / properties:
 
 ### Module OnLoad
 
-Upon loading, the module registers a new bloom module based data type, creates bloom filter (BF.*) commands,
+Upon loading, the module registers a new bloom filter module based data type, creates bloom filter (BF.*) commands,
 bloom specific configurations and the bloom ACL category.
 
 * Module name: bloom
@@ -80,34 +80,30 @@ ValkeyBloom implements persistence related Module data type callbacks for the Bl
 * rdb_load: Deserializes bloom objects from RDB.
 * aof_rewrite: Emits commands into the AOF during the AOF rewriting process.
 
-### RDB Compatibility with ReBloom:
+### RDB Save and Load
 
-During RDB Save of a bloom object, we will need to save the number of filters, expansion rate, false positive rate.
-And for every underlying bloom filter in this object, we store its hash keys used by hashing functions, number of
-hashing functions, number of bits of the bit array, bytes of the bit array itself.
+During RDB Save of a bloom object, the Module will save the number of filters, expansion rate, false positive rate.
+And for every underlying bloom filter in this object, number of hashing functions, number of bits of the bit array,
+bytes of the bit array itself.
 
-The data above is written into the RDB during save operations and can be restored from RDB load. However, the data that
-gets written to the RDB is specific to the data type's structure and struct members. Additionally, the data within the
-underlying bloom filter (from the external crate) is specific to the implementation of the bloom filter as the
-hash key (seed), hashing algorithm, raw bit array data, etc. can all vary.
+We do not save the seed of the hash function used by Bloom Filters in the RDB because the Module uses a fixed seed.
+During RDB Load, we restore and re-create the Bloom object using the RDB data and the fixed seed.
 
-Because of this, it is not possible to be RDB compatible with ReBloom. It might be possible if the RDB Save/Load of the
-ReBloom module is reverse engineered AND also the bloom filter implementation is changed to follow ReBloom Module's raw
-Bloom Filter structure syntax. Additionally, if there is any RDB change in ReBloom, this reverse engineering + structure
-updates will be needed once again.
+### RDB Compatibility with ReBloom
 
-For these reasons, ValkeyBloom is not RDB Compatible with ReBloom.
+ValkeyBloom is not RDB Compatible with ReBloom.
 
-### AOF Rewrite handling:
+The meta data that gets written to the RDB is specific to the Module data type's structure and struct members.
+Additionally, the data within the underlying bloom filter (from the external crate) is specific to the implementation of
+the bloom filter as the hash key (seed), hashing algorithm/s, raw bit array data, etc. can all vary.
 
-Module data types (including bloom) can implement a callback function that will be triggered for Bloom objects to rewrites
-its data as command/s. From the AOF callback, we will handle AOF rewrite by saving a RESTORE command with the key, TTL, and
+Because of this, it is not possible to be RDB compatible with ReBloom.
+
+### AOF Rewrite handling
+
+Module data types (including bloom) can implement a callback function that will be triggered for Bloom objects to rewrite
+its data as command/s. From the AOF callback, we will handle AOF rewrite by saving a BF.LOAD command with the key, TTL, and
 serialized value of the corresponding bloom object.
-
-There is an alternate to the approach above. It involves having the ValkeyBloom Module support BF.LOADCHUNK and
-BF.SCANDUMP commands and the AOF Rewrite callback write BF.LOADCHUNK commands to restore a bloom object in interations.
-This approach was not chosen because we can already save and restore bloom object data from RDB data using the RESTORE command
-without having to support additional Module commands.
 
 ### Migrating workloads from ReBloom:
 
@@ -150,7 +146,6 @@ The bloom data type also supports memory management related callbacks:
 * free_effort: Determine whether the bloom object's memory needs to be lazy reclaimed or synchronously freed. We return
     the number of filters in the bloom object as the free effort and this is similar to how the core handles free_effort
     for aggregated objects.
-
 
 ### Replication
 
@@ -252,7 +247,7 @@ Here are some important factors when evaluating libraries:
 https://crates.io/crates/bloomfilter was chosen as it provides all the required APIs for controlling a bloom filter.
 This library has also been stable through the releases.
 
-Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resuling in
+Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resulting in
 serialization / deserialization incompatibility.
 
 growable-bloom-filter is a bloom filter library that implements a scalable bloom filter. However, it does not allow
@@ -264,23 +259,34 @@ newer versions.
 ### Large BloomFilter objects
 
 Create and Delete operations on large bloom filters take longer durations and will block the main thread for this duration. 
-Because of this, the following operations will be handled differently:
-* defrag callback: If the memory used by any bloom filter within the bloom object is greater than X MB (`bloom_large_item_threshold`
-    constant), we will skip defrag operations on this bloom object. Otherwise, we will defrag the bloom object in iterations
-    for each bloom filter in the bloom object.
-* free_effort callback: This callback decides the free effort for the bloom object. If it is greater than X MB
-    (`bloom_large_item_threshold` constant), we will return 0 to use async free on the bloom object.
-* create operations (BF.ADD/MADD/INSERT/RESERVE): We can compute the estimated size of the bloom filter that will be created as
-    a result of the operation and we can consider rejecting requests in case of unavailable memory. Scalable Bloom filters
-    will grow in used memory after creation - but only as a result of a BF.ADD, BF.MADD, or BF.INSERT operation and we can reject
-    these requests if we identify that it will result in a scale out operation that requires more memory than what is available.
+Because of this, the following operations will be handled differently.
 
+defrag callback:
+
+If the memory used by any bloom filter within the bloom object is greater than 4 KB (`bloom_large_item_threshold`
+constant), we will skip defrag operations on this bloom object. Otherwise, we will defrag the bloom object in iterations
+for each bloom filter in the bloom object.
+
+free_effort callback:
+
+This callback decides the free effort for the bloom object. If it is greater than 4 KB
+(`bloom_large_item_threshold` constant), we will return 0 to use async free on the bloom object.
+
+write operations (BF.ADD/MADD/INSERT/RESERVE):
+
+If the write operation requires creation of a new bloom filter on a particular bloom object, we will compute the memory
+usage of the bloom filter that is about to be created (based on capacity and false positive rate). If the memory usage
+is greater than 64 MB (`bloom_filter_max_memory_usage` constant), the write operation will be rejected.
+
+Scalable Bloom filters will grow in used memory after creation of the bloom object - but only as a result of a BF.ADD, BF.MADD,
+or BF.INSERT operation and we will reject these requests if we identify that it will result in a scale out operation that
+will result in a creation of a filter greater than the allowed size as explained above.
 
 ## Specification
 
 ### Bloom Filter Command API
 
-The following Bloom Filter commands are supported and their API syntax is compatible with ReBloom:
+The following are supported Bloom Filter commands with API syntax compatible with ReBloom:
 BF.ADD <key> <item>
 BF.EXISTS <key> <item>
 BF.MADD <key> <item> [<item> ...]
@@ -290,6 +296,9 @@ BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]
 BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]
 BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]
 
+The following are NEW commands which are not included in ReBloom:
+BF.LOAD <key> <serialized-value-dump> <TTL>
+
 Currently following commands (from ReBloom) are not supported:
 BF.LOADCHUNK <key> <iterator> <data>
 BF.SCANDUMP <key> <iterator>
@@ -297,11 +306,9 @@ BF.SCANDUMP <key> <iterator>
 The BF.SCANDUMP command is used to perform an incremental save on specific Bloom filter object.
 The BF.LOADCHUNK is used to incrementally load / restore a bloom filter object from data from the BF.SCANDUMP command.
 
-The reason for not implementing these two commands is because the Module provides the ability to load and save BloomModule
-data type items during RDB load and save. BF.LOADCHUNK and BF.SCANDUMP are APIs to load bloom filter objects through commands,
-but since we will provide RDB save & load, having specific commands for the same purpose was not considered as required.
-
-Note: Based on the AOF Rewrite discussion, we will decide on whether these commands should be supported.
+The reason for not implementing these two commands is because the ValkeyBloom Module provides the ability to load and save BloomModule
+data type items as part of RDB load and save operations. Additionally, the BF.LOAD command is supported for AOF operations
+to re-create the same Bloom object. Because of these reasons, the BF.LOADCHUNK and BF.SCANDUMP APIs will not be supported.
 
 ### Configurations
 
@@ -314,13 +321,13 @@ The following module configurations are added to customize bloom filters:
 2. bf.bloom_expansion_rate: Controls the default expansion rate. When create operations (BF.ADD/MADD) are used, bloom
     objects created will use the expansion rate specified by this config. This controls the capacity of the new filter
     that gets added to the list of filters as a result of scaling.
-3. bf.bloom_max_filters: Controls the maximum number of filters that any bloom object is allowed to scale out to.
-4. bf.bloom_fp_rate: Controls the default false positive rate that new bloom objects created (from BF.ADD/MADD) will use.
+3. bf.bloom_fp_rate: Controls the default false positive rate that new bloom objects created (from BF.ADD/MADD) will use.
 
 ### Constants
 1. bloom_large_item_threshold: Memory usage of a bloom object beyond which bloom objects are exempted from defrag operations
     and when deleted, the Module will indicate the object's free_effort as 0 to be async freed.
-
+2. bloom_filter_max_memory_usage: The maximum memory usage of a particular bloom filter that is allowed. Creation of
+    bloom filters larger than this will not be allowed.
 
 ### ACL
 
@@ -330,10 +337,11 @@ There are 4 existing ACL categories which are updated to include new BloomFilter
 
 ### Info metrics
 
-Info metrics are visible through the “info bloom or “info modules” command:
+Info metrics are visible through the `info bloom` or `info modules` command:
 * Number of bloom filter objects
 * Total bytes used by bloom filter objects
 
+In addition to this, we have a specific API (`BF.INFO`) that can be used to list information and stats on the bloom object.
 
 ## References
 * [ValkeyBloom GitHub Issue on the valkey project](https://github.com/valkey-io/valkey/issues/407)
