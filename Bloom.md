@@ -8,7 +8,6 @@ Status: Proposed
 ## Abstract
 
 The proposed feature is ValkeyBloom which is a Rust based Module that brings a native bloom filter data type into Valkey.
-The module should be API-compatible with Redis Ltd.’s ReBloom Module.
 
 ## Motivation
 
@@ -72,6 +71,16 @@ bloom specific configurations and the bloom ACL category.
 * Module name: bloom
 * Data type name: bloom
 
+### Module Unload
+
+Once the Module has been loaded, the `MODULE UNLOAD` will be rejected since Module Data type is created on load.
+Valkey does not allow unloading of Modules that exports a module data type.
+
+```
+127.0.0.1:6379> MODULE UNLOAD bloom
+(error) ERR Error unloading module: the module exports one or more module-side data types, can't unload
+```
+
 ### Persistence
 
 ValkeyBloom implements persistence related Module data type callbacks for the Bloom data type:
@@ -88,6 +97,7 @@ bytes of the bit array itself.
 
 We do not save the seed of the hash function used by Bloom Filters in the RDB because the Module uses a fixed seed.
 During RDB Load, we restore and re-create the Bloom object using the RDB data and the fixed seed.
+The main benefits to using fixed seed are that it reduces the RDB size and it simplifies the RDB save and load.
 
 ### RDB Compatibility with ReBloom
 
@@ -137,6 +147,10 @@ Cons
 
 ### Memory Management
 
+On Module Load, the Rust Module overrides the memory allocator that will delegates the allocation and deallocation tasks
+to the Valkey server using the existing Module APIs: ValkeyModule_Alloc and ValkeyModule_Free. This API panics if unable
+to allocate enough memory.
+
 The bloom data type also supports memory management related callbacks:
 
 * free: Frees the bloom filter object when it is deleted, expired or evicted.
@@ -152,6 +166,14 @@ The bloom data type also supports memory management related callbacks:
 Every Bloom Filter based write operation (bloom object creations, scaling, setting of an item on a filter which returns 1
 indicating a new entry, etc) will be replicated to replica nodes. Attempts of adding an already existing item to a bloom
 object (which returns 0) will not replicated.
+
+Note: When BF.ADD/BF.MADD/BF.INSERT commands (containing one or more items) are executed on a scalable bloom object which
+is at full capacity on primary node, we check whether the item exists or not. This check is based on the configured false
+positive rate. If the item is not found, the command results in scaling out by adding a new filter to the bloom object,
+adding the item to it, and then replicating the command verbatim to replica nodes. However, the replicated command can
+result in a false positive when it checks whether the item exists. In this case, the scale out does not occur on the bloom
+object on the replica. This can result in a slight different memory usage between primary and replica nodes which is more
+apparent when bloom objects have large filters.
 
 ### Keyspace Event Notification
 
@@ -242,7 +264,7 @@ Here are some important factors when evaluating libraries:
 * Is it actively maintained?
 * Has there been any breaking changes in serialization and deserialization of bloom filters over version updates?
 * Performance
-* Popularity
+* Popularity (More Crate Downloads / GitHub Stars)
 
 https://crates.io/crates/bloomfilter was chosen as it provides all the required APIs for controlling a bloom filter.
 This library has also been stable through the releases.
@@ -279,29 +301,42 @@ usage of the bloom filter that is about to be created (based on capacity and fal
 is greater than 64 MB (`bloom_filter_max_memory_usage` constant), the write operation will be rejected.
 
 Scalable Bloom filters will grow in used memory after creation of the bloom object - but only as a result of a BF.ADD, BF.MADD,
-or BF.INSERT operation and we will reject these requests if we identify that it will result in a scale out operation that
-will result in a creation of a filter greater than the allowed size as explained above.
+or BF.INSERT operation and we will reject these requests if it requires a scale out operation that would result in a
+creation of a filter greater than the allowed size as explained above.
+
+It is possible for the user to create their bloom object with an expansion rate of 1. In this case, it is possible that
+the bloom object consists of a vector of several bloom filters that are just below the `bloom_filter_max_memory_usage`
+threshold. In this case, the Bloom object becomes similar to the Native List data type in that we allow multiple elements
+in the list, but we enforce a limit (4 GB for Lists) for each individual element in the list.
 
 ## Specification
 
 ### Bloom Filter Command API
 
 The following are supported Bloom Filter commands with API syntax compatible with ReBloom:
-BF.ADD <key> <item>
-BF.EXISTS <key> <item>
-BF.MADD <key> <item> [<item> ...]
-BF.MEXISTS <key> <item> [<item> ...]
-BF.CARD <key>
-BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]
-BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]
-BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]
+`BF.ADD <key> <item>`
+
+`BF.EXISTS <key> <item>`
+
+`BF.MADD <key> <item> [<item> ...]`
+
+`BF.MEXISTS <key> <item> [<item> ...]`
+
+`BF.CARD <key>`
+
+`BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]`
+
+`BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]`
+
+`BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]`
 
 The following are NEW commands which are not included in ReBloom:
-BF.LOAD <key> <serialized-value-dump> <TTL>
+
+`BF.LOAD <key> <serialized-value-dump> <TTL>`
 
 Currently following commands (from ReBloom) are not supported:
-BF.LOADCHUNK <key> <iterator> <data>
-BF.SCANDUMP <key> <iterator>
+* `BF.LOADCHUNK <key> <iterator> <data>`
+* `BF.SCANDUMP <key> <iterator>`
 
 The BF.SCANDUMP command is used to perform an incremental save on specific Bloom filter object.
 The BF.LOADCHUNK is used to incrementally load / restore a bloom filter object from data from the BF.SCANDUMP command.
@@ -312,9 +347,11 @@ to re-create the same Bloom object. Because of these reasons, the BF.LOADCHUNK a
 
 ### Configurations
 
-The default properties using which Bloom Filter objects are created can be controlled using configs.
+The default properties using which Bloom Filter objects are created can be controlled using configs. The values of the
+configs below are only used on a bloom object if the user does not specify the properties explicitly. Example: Using
+BF.INSERT or BF.RESERVE can override the default properties.
 
-The following module configurations are added to customize bloom filters:
+Supported Module configurations:
 1. bf.bloom_capacity: Controls the default capacity. When create operations (BF.ADD/MADD) are used, bloom objects created
     will use the capacity specified by this config. This controls the number of items that can be added to a bloom filter
     object before it is scaled out (scaling) OR before it rejects add operations due to insufficient capacity on the object (nonscaling).
