@@ -107,6 +107,10 @@ The meta data that gets written to the RDB is specific to the Module data type's
 Additionally, the data within the underlying bloom filter (from the external crate) is specific to the implementation of
 the bloom filter as the hash key (seed), hashing algorithm/s, raw bit array data, etc. can all vary.
 
+Restoring a bloom filter means that items will need to resolve (through hash functions) to the same indexes of the bit
+array. The same hash seed, hashing algorithms, and number of hash functions, bit array will need to be used in order for
+previously "added" items to the bloom filter to be resolved through "exists" operations after restoration.
+
 Because of this, it is not possible to be RDB compatible with ReBloom.
 
 ### AOF Rewrite handling
@@ -174,26 +178,6 @@ adding the item to it, and then replicating the command verbatim to replica node
 result in a false positive when it checks whether the item exists. In this case, the scale out does not occur on the bloom
 object on the replica. This can result in a slight different memory usage between primary and replica nodes which is more
 apparent when bloom objects have large filters.
-
-### Keyspace Event Notification
-
-Every bloom filter based write command (that involves mutation as explained in the section above) will be made to publish
-a keyspace event after the data is mutated. Commands include: BF.RESERVE, BF.ADD, BD.MADD, and BF.INSERT.
-
-* Event type: VALKEYMODULE_NOTIFY_GENERIC
-* Event name: One of the two event names will be published based on the command & scenario:
- * bloom.add: Any BF.ADD, BF.MADD, or BF.INSERT command that results in adding item/s to a bloom object.
- * bloom.reserve: Any BF.ADD, BF.MADD, BF.INSERT, or BF.RESERVE command that results in creation of a bloom object.
-
-
-Users can subscribe to the bloom events via the standard keyspace event pub/sub. For example,
-
-```text
-1. enable keyspace event notifications:
-    valkey-cli config set notify-keyspace-events KEA
-2. suscribe to keyspace & keyevent event channels:
-    valkey-cli psubscribe '__key*__:*'
-```
 
 ### Non Scalable filters
 
@@ -267,7 +251,7 @@ Here are some important factors when evaluating libraries:
 * Popularity (More Crate Downloads / GitHub Stars)
 
 https://crates.io/crates/bloomfilter was chosen as it provides all the required APIs for controlling a bloom filter.
-This library has also been stable through the releases.
+This library has also been stable through the releases. It uses SipHash as the hashing algorithm ([SipHasher13](https://docs.rs/siphasher/latest/siphasher/sip128/struct.SipHasher13.html)).
 
 Certain libraries (e.g. fastbloom) are no longer compatible with older versions (after updates) resulting in
 serialization / deserialization incompatibility.
@@ -316,23 +300,163 @@ in the list, but we enforce a limit (4 GB for Lists) for each individual element
 The following are supported Bloom Filter commands with API syntax compatible with ReBloom:
 `BF.ADD <key> <item>`
 
+This API can be used to add an item to an existing bloom object or to create + add the item.
+Response is in the Integer reply format.
+
+Item does not exist (based on false positve rate) and was successfully to the bloom filter.
+If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
+```
+(integer) 1
+```
+
+Item already exists (based on false positve rate).
+```
+(integer) 0
+```
+
 `BF.EXISTS <key> <item>`
+
+This API can be used to check if an item exists in a bloom object.
+Response is in the Integer reply format.
+
+Item exists (based on false positve rate).
+```
+(integer) 1
+```
+
+Item does not exist (based on false positve rate).
+```
+(integer) 0
+```
 
 `BF.MADD <key> <item> [<item> ...]`
 
+This API can be used to add item/s to an existing bloom object or to create + add the item/s.
+Response is the Array reply format with one or more Integer replies (one for each item argument provided).
+
+1 indicates the item does not exist (based on false positve rate) yet and was added successfully to the bloom filter.
+If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
+0 indicates the item already exists (based on false positve rate).
+```
+(integer) 1
+(integer) 1
+(integer) 0
+```
+
 `BF.MEXISTS <key> <item> [<item> ...]`
+
+This API can be used to check if item/s exist in a bloom object.
+Response is the Array reply format with one or more Integer replies (one for each item argument provided).
+
+1 indicates the item exists (based on false positve rate). 0 indicates the item does not exist (based on false positve rate).
+```
+(integer) 1
+(integer) 1
+(integer) 0
+```
 
 `BF.CARD <key>`
 
+This API can be used to check the number of items added to the bloom object (across all the filters).
+Response is in the Integer reply format.
+```
+(integer) 20
+```
+
 `BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]`
+
+The API can be used to get info statistics on the particular bloom object across all its filters.
+Response is in an Array reply format with one or more Integer replies (based on whether a specific info stat is provided).
+
+"Capacity" is the number of items that can be stored on the bloom object across its vector of bloom filters.
+
+"Size" is the total memory used by the bloom object (including memory allocated for each bloom filter).
+
+"Filters" is the number of bloom filters that the bloom object has. 1 indicates no scale out has occurred. >1 indicates otherwise.
+
+"Number of items inserted" is the number of items added to the bloom object across all the filters.
+
+"Expansion rate" defines the auto scaling behavior. -1 indicates the bloom object is a non scaling. >=1 indicates scaling.
+
+```
+127.0.0.1:6379> BF.INFO bloomobject1
+ 1) Capacity
+ 2) (integer) 1000
+ 3) Size
+ 4) (integer) 1431
+ 5) Number of filters
+ 6) (integer) 1
+ 7) Number of items inserted
+ 8) (integer) 1
+ 9) Expansion rate
+10) (integer) 2
+127.0.0.1:6379> BF.INFO bloomobject1 SIZE
+1) (integer) 1431
+127.0.0.1:6379> BF.INFO bloomobject1 CAPACITY
+1) (integer) 1000
+127.0.0.1:6379> BF.INFO bloomobject1 FILTERS
+1) (integer) 1
+```
 
 `BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]`
 
+This API is used to create a bloom object with specific properties.
+When the command is used, only either EXPANSION or NONSCALING can be used. If both are used, an error is returned.
+
+"CAPACITY" is the number of items that the users wants to store on the bloom object. For non scaling, this is a limit on
+the number of items that can be inserted. For scaling, this is the number of items that can be added after which scaling
+occurs.
+
+"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+
+"NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
+full capacity.
+
+The response is a simple String reply with OK indicating successful creation.
+```
+OK
+```
+
 `BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]`
+
+This API is used to create a bloom object with specific properties and add item/s to it.
+
+"CAPACITY" is the number of items that the users wants to store on the bloom object. For non scaling, this is a limit on
+the number of items that can be inserted. For scaling, this is the number of items that can be added after which scaling
+occurs.
+
+"ERROR" is the false positive error rate.
+
+"NOCREATE" can be used to specify that the command should not result in creation of a new bloom object if it does not exist.
+If NOCREATE is used along with CAPACITY or ERROR, an error is returned.
+
+"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+
+"NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
+full capacity. Only either EXPANSION or NONSCALING can be used. If both are used, an error is returned.
+
+"ITEMS" can be used to list one or more items to add to the bloom object.
+
+The response is an array reply with one or more Integer replies.
+1 indicates the item does not exist (based on false positve rate) yet and was added successfully to the bloom filter.
+If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
+0 indicates the item already exists (based on false positve rate).
+```
+(integer) 1
+(integer) 1
+(integer) 0
+```
 
 The following are NEW commands which are not included in ReBloom:
 
 `BF.LOAD <key> <serialized-value-dump> <TTL>`
+
+Response is in the Simple String reply format. Returns OK on a successful restoration of a bloom object.
+This command is only used during AOF Rewrite and is written into the AOF file to help with restoration.
+
+```
+OK
+```
 
 Currently following commands (from ReBloom) are not supported:
 * `BF.LOADCHUNK <key> <iterator> <data>`
@@ -371,6 +495,26 @@ Supported Module configurations:
 The ValkeyBloom module will introduce a new ACL category - @bloom.
 
 There are 4 existing ACL categories which are updated to include new BloomFilter commands: @read, @write, @fast, @slow.
+
+### Keyspace Event Notification
+
+Every bloom filter based write command (that involves mutation as explained in the section above) will be made to publish
+a keyspace event after the data is mutated. Commands include: BF.RESERVE, BF.ADD, BD.MADD, and BF.INSERT.
+
+* Event type: VALKEYMODULE_NOTIFY_GENERIC
+* Event name: One of the two event names will be published based on the command & scenario:
+ * bloom.add: Any BF.ADD, BF.MADD, or BF.INSERT command that results in adding item/s to a bloom object.
+ * bloom.reserve: Any BF.ADD, BF.MADD, BF.INSERT, or BF.RESERVE command that results in creation of a bloom object.
+
+
+Users can subscribe to the bloom events via the standard keyspace event pub/sub. For example,
+
+```text
+1. enable keyspace event notifications:
+    valkey-cli config set notify-keyspace-events KEA
+2. suscribe to keyspace & keyevent event channels:
+    valkey-cli psubscribe '__key*__:*'
+```
 
 ### Info metrics
 
