@@ -298,7 +298,8 @@ in the list, but we enforce a limit (4 GB for Lists) for each individual element
 ### Bloom Filter Command API
 
 The following are supported Bloom Filter commands with API syntax compatible with ReBloom:
-`BF.ADD <key> <item>`
+
+**`BF.ADD <key> <item>`**
 
 This API can be used to add an item to an existing bloom object or to create + add the item.
 Response is in the Integer reply format.
@@ -314,7 +315,7 @@ Item already exists (based on false positve rate).
 (integer) 0
 ```
 
-`BF.EXISTS <key> <item>`
+**`BF.EXISTS <key> <item>`**
 
 This API can be used to check if an item exists in a bloom object.
 Response is in the Integer reply format.
@@ -329,7 +330,7 @@ Item does not exist (based on false positve rate).
 (integer) 0
 ```
 
-`BF.MADD <key> <item> [<item> ...]`
+**`BF.MADD <key> <item> [<item> ...]`**
 
 This API can be used to add item/s to an existing bloom object or to create + add the item/s.
 Response is the Array reply format with one or more Integer replies (one for each item argument provided).
@@ -343,7 +344,7 @@ If a bloom object named <key> does not exist, the bloom object is created and th
 (integer) 0
 ```
 
-`BF.MEXISTS <key> <item> [<item> ...]`
+**`BF.MEXISTS <key> <item> [<item> ...]`**
 
 This API can be used to check if item/s exist in a bloom object.
 Response is the Array reply format with one or more Integer replies (one for each item argument provided).
@@ -355,7 +356,7 @@ Response is the Array reply format with one or more Integer replies (one for eac
 (integer) 0
 ```
 
-`BF.CARD <key>`
+**`BF.CARD <key>`**
 
 This API can be used to check the number of items added to the bloom object (across all the filters).
 Response is in the Integer reply format.
@@ -363,7 +364,7 @@ Response is in the Integer reply format.
 (integer) 20
 ```
 
-`BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]`
+**`BF.INFO <key> [CAPACITY | SIZE | FILTERS | ITEMS | EXPANSION]`**
 
 The API can be used to get info statistics on the particular bloom object across all its filters.
 Response is in an Array reply format with one or more Integer replies (based on whether a specific info stat is provided).
@@ -398,7 +399,7 @@ Response is in an Array reply format with one or more Integer replies (based on 
 1) (integer) 1
 ```
 
-`BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]`
+**`BF.RESERVE <key> <false_positive_rate> <capacity> [EXPANSION <expansion>] | [NONSCALING]`**
 
 This API is used to create a bloom object with specific properties.
 When the command is used, only either EXPANSION or NONSCALING can be used. If both are used, an error is returned.
@@ -417,7 +418,7 @@ The response is a simple String reply with OK indicating successful creation.
 OK
 ```
 
-`BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]`
+**`BF.INSERT <key> [CAPACITY <capacity>] [ERROR <fp_error>] [EXPANSION <expansion>] [NOCREATE] [NONSCALING] ITEMS <item> [<item> ...]`**
 
 This API is used to create a bloom object with specific properties and add item/s to it.
 
@@ -449,7 +450,7 @@ If a bloom object named <key> does not exist, the bloom object is created and th
 
 The following are NEW commands which are not included in ReBloom:
 
-`BF.LOAD <key> <serialized-value-dump> <TTL>`
+**`BF.LOAD <key> <serialized-value-dump> <TTL>`**
 
 Response is in the Simple String reply format. Returns OK on a successful restoration of a bloom object.
 This command is only used during AOF Rewrite and is written into the AOF file to help with restoration.
@@ -459,8 +460,10 @@ OK
 ```
 
 Currently following commands (from ReBloom) are not supported:
-* `BF.LOADCHUNK <key> <iterator> <data>`
-* `BF.SCANDUMP <key> <iterator>`
+
+**`BF.LOADCHUNK <key> <iterator> <data>`**
+
+**`BF.SCANDUMP <key> <iterator>`**
 
 The BF.SCANDUMP command is used to perform an incremental save on specific Bloom filter object.
 The BF.LOADCHUNK is used to incrementally load / restore a bloom filter object from data from the BF.SCANDUMP command.
