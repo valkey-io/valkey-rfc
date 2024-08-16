@@ -15,11 +15,11 @@ What the feature solves and why the existing functionality is not enough.
 
 ## Design considerations (Required)
 
-A description of the design constraints and requirements for the proposal. Comparisons with similar features in other projects.
+A description of the design constraints and requirements for the proposal, along with comparisons to similar features in other projects.
 
 ## Specification (Required)
 
-A more detailed description of the feature, including why certain details in the design have been chosen.
+A more detailed description of the feature, including the reasoning behind the design choices.
 
 ### Commands (Optional)
 
@@ -79,7 +79,7 @@ If there are any benchmarks performed and preliminary results are available to s
 
 ### Testing (Optional)
 
-If there are any test scenarios planned out to support the feature's stability and validate behavior.
+If there are any test scenarios planned to ensure the feature's stability and validate its behavior.
 
 ### Debug mechanism (Optional)
 
