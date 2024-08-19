@@ -341,12 +341,15 @@ across every element in the bloom object's vector of filters.
 <number-of-bloom-filters-N>
 <expansion-rate>
 <false-positive-rate>
+<byte-vector-of-filter-#1>
+<number-of-hash-fns-in-filter-#1>
 <number-of-bits-in-bitmap-of-filter-#1>
-<number-of-items-in-filter-#1>
 <capacity-of-filter-#1>
 .
 .
 .
+<byte-vector-of-filter-#N>
+<number-of-hash-fns-in-filter-#N>
 <number-of-bits-in-bitmap-of-filter-#N>
 <number-of-items-in-filter-#N>
 <capacity-of-filter-#N>
