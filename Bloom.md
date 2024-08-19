@@ -236,6 +236,43 @@ Practically, we can expect scaling to stop well before the 50 range. With the de
 expansion rate of 2, the total items inserted (across all filters) would exceed the 64-bit unsigned integer limit before
 reaching 50 filters.
 
+Below are results from an example performance test scenario. We have one BloomObject that is configured with the following
+properties:
+
+* Expansion rate = 1 (Scaling enabled)
+* Capacity per filter = 1000 (This will be the same capacity for every subsequent filter due to expansion of 1)
+* False positive rate = 0.001
+
+In the test run, we start up ValkeyServer on a 4 core machine.
+
+Starting the server (pinned to 2 cores):
+
+```
+valkey-server --loadmodule <path_to_module>
+sudo taskset -cp 0,1 <valkey-server pid>
+```
+
+Creating the BloomObject & Running the benchmark (pinned to 1 core):
+
+```
+127.0.0.1:6379> bf.reserve key 0.001 1000 expansion 1
+# Add enough items to scale out such that N additional filters are added to the bloom object "key".
+sudo taskset -c 2 /home/ec2-user/valkey-benchmark -n 1000000 BF.EXISTS key item
+```
+
+**Results averaged over 3 runs:**
+
+| Total Capacity | Filters per Bloom Object | p50 AVG   | p95 AVG   | p99 AVG   | TPS AVG       |
+|----------------|----------------------|-----------|-----------|-----------|----------------|
+| 1000           | 1                    | 0.263     | 0.30833   | 0.559     | 95218.58667   |
+| 10000          | 10                   | 0.26033   | 0.311     | 0.57233   | 94765.19333   |
+| 25000          | 25                   | 0.255     | 0.30033   | 0.55367   | 98458.69667   |
+| 50000          | 50                   | 0.26833   | 0.50833   | 0.831     | 99669.16667   |
+| 100000         | 100                  | 0.487     | 0.711     | 0.99367   | 83829.30333   |
+| 250000         | 250                  | 0.96167   | 1.17233   | 1.30033   | 49318.69      |
+| 500000         | 500                  | 1.991     | 2.31633   | 2.40167   | 25476.69333   |
+| 1000000        | 1000                 | 4.45233   | 4.76433   | 4.879     | 12034.26667   |
+
 
 ### Choice of Bloom Filter Library
 
@@ -267,18 +304,18 @@ newer versions.
 Create and Delete operations on large bloom filters take longer durations and will block the main thread for this duration. 
 Because of this, the following operations will be handled differently.
 
-defrag callback:
+**defrag callback:**
 
 If the memory used by any bloom filter within the bloom object is greater than 4 KB (`bloom_large_item_threshold`
 constant), we will skip defrag operations on this bloom object. Otherwise, we will defrag the bloom object in iterations
 for each bloom filter in the bloom object.
 
-free_effort callback:
+**free_effort callback:**
 
 This callback decides the free effort for the bloom object. If it is greater than 4 KB
 (`bloom_large_item_threshold` constant), we will return 0 to use async free on the bloom object.
 
-write operations (BF.ADD/MADD/INSERT/RESERVE):
+**write operations (BF.ADD/MADD/INSERT/RESERVE):**
 
 If the write operation requires creation of a new bloom filter on a particular bloom object, we will compute the memory
 usage of the bloom filter that is about to be created (based on capacity and false positive rate). If the memory usage
@@ -294,6 +331,26 @@ threshold. In this case, the Bloom object becomes similar to the Native List dat
 in the list, but we enforce a limit (4 GB for Lists) for each individual element in the list.
 
 ## Specification
+
+### RDB Format
+
+During RDB save, the Module data type callback is invoked and we save required meta data and bloom filter specific data
+across every element in the bloom object's vector of filters.
+
+```
+<number-of-bloom-filters-N>
+<expansion-rate>
+<false-positive-rate>
+<number-of-bits-in-bitmap-of-filter-#1>
+<number-of-items-in-filter-#1>
+<capacity-of-filter-#1>
+.
+.
+.
+<number-of-bits-in-bitmap-of-filter-#N>
+<number-of-items-in-filter-#N>
+<capacity-of-filter-#N>
+```
 
 ### Bloom Filter Command API
 
