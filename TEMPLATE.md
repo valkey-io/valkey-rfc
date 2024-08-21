@@ -1,7 +1,6 @@
 ---
 RFC: <PR number>
 Status: <Proposed>
-Version: <version number>
 ---
 
 # Title (Required)
