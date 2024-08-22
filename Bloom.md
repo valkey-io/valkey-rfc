@@ -68,8 +68,9 @@ We have the following terminologies / properties:
 Upon loading, the module registers a new bloom filter module based data type, creates bloom filter (BF.*) commands,
 bloom specific configurations and the bloom ACL category.
 
-* Module name: bloom
+* Module name: bf
 * Data type name: bloom
+* Module shared object file name: valkeybloom.so
 
 ### Module Unload
 
