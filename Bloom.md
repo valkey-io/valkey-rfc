@@ -72,6 +72,15 @@ bloom specific configurations and the bloom ACL category.
 * Data type name: bloom
 * Module shared object file name: valkeybloom.so
 
+With the Module name as "bf", ValkeyBloom is compatible with ReBloom in its Module name which is accessible by clients
+through HELLO, MODULE LIST, and INFO commands. Also, metrics and configs will be prefixed with this name (by design for Modules).
+
+Regarding the Module Data type name, because ValkeyBloom's Module Data type (the current version) is not compatible with
+ReBloom, it is not named same as ReBloom's.
+This will allow us to create a new Module Data Type in the future which can be compatible with the ReBloom and this will
+be named the same as ReBloom's Bloom Filter data type. When we do this, we will need to support both Data Types (current
+version) and the future version and their names must be unique.
+
 ### Module Unload
 
 Once the Module has been loaded, the `MODULE UNLOAD` will be rejected since Module Data type is created on load.
