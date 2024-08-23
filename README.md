@@ -51,4 +51,4 @@ sections unless they are unnecessary for the proposal you are submitting.
   certain details in the design have been chosen.
 * Links to related material such as issues, pull requests, papers, or other references.
 
-Here's a [RFC template](TEMPLATE.md) to get started.
+Here's an [RFC template](TEMPLATE.md) to get started.
