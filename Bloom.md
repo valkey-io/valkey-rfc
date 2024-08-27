@@ -1,6 +1,6 @@
 ---
 RFC: 4
-Status: Proposed
+Status: Accepted
 ---
 
 # ValkeyBloom Module RFC
