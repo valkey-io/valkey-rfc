@@ -50,3 +50,5 @@ sections unless they are unnecessary for the proposal you are submitting.
 * Specification. A more detailed description of the feature, including why
   certain details in the design have been chosen.
 * Links to related material such as issues, pull requests, papers, or other references.
+
+Here's an [RFC template](TEMPLATE.md) to get started.
