@@ -14,7 +14,7 @@ As being integrated in the Valkey Functions infrastructure, Triggers are persist
 
 ## Motivation 
 
-1. *** Localized actions. *** 
+1. ***Localized actions.*** 
    Today different application use cases rely on [Valkey keyspace Notifications](https://valkey.io/topics/notifications/) in order to manage the database. For example,       consider a case were a key is referenced in different places (like SortedSet and lists). In order to support TTL logic a cleanup needs to be made when the key is evicted to remove it from the different lists or sets. It is possible to have the application listen for eviction events and perform the cleanup, however this would require the application to rely on non-persistent subscribe connections, implement application side logic and extra network hops, which can cause the cleanup to be operated long after the key was evicted.
    For example lets take a commonly used pattern of scheduled tasks.
    In such cases user usually register tasks in a ZSET with the matching executing time as the score.
@@ -46,7 +46,7 @@ As being integrated in the Valkey Functions infrastructure, Triggers are persist
    Will cause the specified message to be published every 3 seconds.
    Note that the same concept  can be used to implement HASH members eviction!
 
-2. *** Flexibility of extensibility. *** 
+2. ***Flexibility of extensibility.*** 
    There are some cases were application needs to extend the logic of server side operations. In some of the cases it might be problematic making the change on the application    
    side, either because of the risk to deploy the application part or since the operation is not triggered by the application (eg evictions, expirations etc...).
    For example, consider the current implementation of [Valkey keyspace Notifications](https://valkey.io/topics/notifications/). The existing mechanism relies on non-persistent pub/sub notifications.
@@ -81,7 +81,7 @@ As being integrated in the Valkey Functions infrastructure, Triggers are persist
    
    [Valkey keyspace Notifications](https://valkey.io/topics/notifications/) has another major disadvantage: they are not reported on the cluster-bus. While this might have good reasoning (eg avoid cluster-bud load, duplication of events etc...), this makes Valkey clients almost unable to manage key events listeners on Valkey clusters. Valkey triggers can enable the user to decide to publish keyspace events on the cluster bus. This way the trigger code can make smart decisions about publishing of the event and then user the 'PUBLISH' call in order to make the event propagated to all cluster nodes.
 
-3. *** Security. *** 
+3. ***Security.*** 
    In some cases there is a need to limit the access to the cache. Currently Valkey provides restricting functionality via [Access Control Lists](https://valkey.io/topics/acl/).
    However what if there is a need to access restricted parts of the dataset without granting real permissions to clients?
    Since a trigger can operate without explicit user request, it can potentially be operated under any defined ACL user which will enable it to operate actions on restricted parts of the dataset.   
@@ -231,4 +231,4 @@ The suggestion here is to enable reporting error msg on a predefined pub/sub cha
 1. All error msgs will be intercepted as deferred errors (much like modules do). 
 2. After trigger completes run, in case errors were issues, it will update the stats with the num,ber of errors.
 3. The trigger will report the errors to a dedicated channel in the following structure:
-   "__triggers@errors__:<trigger-name>"
+   `__triggers@errors__:<trigger-name>`
