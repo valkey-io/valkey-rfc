@@ -158,7 +158,7 @@ Also in case **e2** is issued the **t** is being executed and cause event **e1**
 Whenever some event triggers an action, we will need this action to be processed in the scope of a specific database and ACL user.
 
 #### Database context
-Since Redis triggers are built on keyspace events, the DB scope will be the same as the keyspace event was issued on.
+Since Valkey triggers are built on keyspace events, the DB scope will be the same as the keyspace the event was issued on.
 
 #### ACL User scope
 By default the scope of the user will by the superuser which will not be limited by any authentication restrictions. 
