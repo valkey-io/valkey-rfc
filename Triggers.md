@@ -212,7 +212,7 @@ TBD
 The "Stats" info section will be added with the following statistics:
 - **total_trigger_calls -** the number of general trigger calls. this will not be a teardown list of calls per trigger function (this can be taken from the function list command as will be explained later)
 - **total_trigger_errors -** The total number of errors during trigger execution (an error is counted for each time the afterErrorReply is called).
-**total_trigger_duration -** The total time spent running trigger related code.
+- **total_trigger_duration -** The total time spent running trigger related code.
 
 ### Per trigger statistics
 The same global statistics will be available on a per-trigger resolution via the `FUNCTION LIST` command:
