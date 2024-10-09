@@ -36,7 +36,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
    So in order to use them the user can simply register operations to be triggered:
 
    ```
-   fcall schedule 0 'redis.call("PUBLISH", "scheduled", "this is a msg from the past")' "3"
+   fcall schedule 0 'server.call("PUBLISH", "scheduled", "this is a msg from the past")' "3"
    ```
    Will cause publish of a msg after 3 seconds from the time the fcall was processed.
 
