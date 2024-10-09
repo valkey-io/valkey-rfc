@@ -117,7 +117,7 @@ The function synopsis will be identical for all triggers which will get the foll
 
 **c.     db -** the id of the db context for which the event is triggered (note it is not necessarily the current db scope the trigger is executed in, ie. MOVE event).
 
-For LUA engine based functions, The key will be supplied as the first argument in the keys array (eg KEYS[1]) 
+For LUA engine based functions, the key will be supplied as the first argument in the keys array (i.e. KEYS[1]).
 The **event** and **db** will be supplied in the ARGS array respectively (event will be provided as ARGS[1] and db as ARGS[2])
 
 
