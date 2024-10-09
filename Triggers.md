@@ -49,7 +49,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
 2. ***Flexibility of extensibility.*** 
    There are some cases were application needs to extend the logic of server side operations. In some of the cases it might be problematic making the change on the application    
    side, either because of the risk to deploy the application part or since the operation is not triggered by the application (eg evictions, expirations etc...).
-   For example, consider the current implementation of [Valkey keyspace Notifications](https://valkey.io/topics/notifications/). The existing mechanism relies on non-persistent pub/sub notifications.
+   For example, consider the current implementation of [Valkey keyspace notifications](https://valkey.io/topics/notifications/). The existing mechanism relies on non-persistent pub/sub notifications.
    In order to persist the notifications it is possible to write them into a sorted set. 
    Triggers can provide this ability in a very straightforward way. For example, consider the following function library:
 
