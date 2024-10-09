@@ -27,7 +27,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
 
    The external application code will only have to add tasks to the ZSET **z** with score matching their required execution time.
    1. once the task is added to **z** a trigger code will be executed which will take the minimal score from the ZSET **z**, and apply the diff to the current time to the TTL of key **k**.
-   2. once key **k** has expired, a trigger will be executed which will remove and execute all the tasks from the zset **z**
+   2. once key **k** has expired, a trigger will be executed which will remove and execute the tasks from the zset **z** that have scores lower than the current time.
 
    Here is an example library code to schedule tasks to be executed after/every several seconds
 
