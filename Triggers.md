@@ -225,7 +225,7 @@ should `CONFIG RESETSTAT` also reset the triggers statistics, or should that onl
 
 ### Debug mechanism 
 
-While Valkey functions and scripts are executed as part of the FCALL/EVAL calls, it is thus possible to report the errors back to the calling client.
+When Valkey functions and scripts are executed via FCALL/EVAL, it is possible to report the errors back to the calling client.
 Triggers, however, are silently executing which makes it hard for the user to understand why the trigger did not work and what errors occurred during execution of the trigger.
 The suggestion here is to enable reporting error msg on a predefined pub/sub channel:
 1. All error msgs will be intercepted as deferred errors (much like modules do). 
