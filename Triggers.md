@@ -10,7 +10,7 @@ Valkey triggers are persistent procedures which are executed in response to some
 Today [Valkey keyspace Notifications](https://valkey.io/topics/notifications/) offer the ability to publish events to dedicated pub/sub channels. 
 Valkey triggers add the ability to place extending logic on such keyspace events and to localize actions on the server side reducing the need to monitor and react to events on the application side.
 We propose to extend the existing [Valkey Functions](https://valkey.io/topics/functions-intro/) with the ability to define trigger function calls on specific keyspace events.
-As being integrated in the Valkey Functions infrastructure, Triggers are persisted as part of the user data.
+As they are being integrated into the Valkey Functions infrastructure, Triggers are persisted as part of the user data.
 
 ## Motivation 
 
