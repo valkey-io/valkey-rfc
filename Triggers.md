@@ -88,7 +88,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
 
 ### Can't the same be done with modules?
 Modules have the ability to build logic placed on top of keyspace events. However Modules provide a much more restrictive form of logic which is much harder to implement and dynamically replace. 
-By building this new logic inside the redis function library users will have a much more simple way to create stored procedures which are persistent, managed and replicated. 
+By building this new logic inside the Valkey function library users will have a much simpler way to create stored procedures which are persistent, managed and replicated. 
 
 
 ## Design and Specification
