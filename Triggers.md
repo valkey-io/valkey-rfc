@@ -218,7 +218,7 @@ The "Stats" info section will be added with the following statistics:
 The same global statistics will be available on a per-trigger resolution via the `FUNCTION LIST` command:
 - "calls" -  the total number of times the trigger has called
 - "errors" - the total number of errors issued during this trigger run
-"total_duration" - the aggregated total duration time this trigger run
+- "total_duration" - the aggregated total duration time this trigger run
 
 *** Open question ***
 should `CONFIG RESETSTAT` also reset the triggers statistics, or should that only be done when functions lib is reloaded?
