@@ -196,7 +196,7 @@ Much like functions the triggers part will describe a per-trigger information:
           9) "errors"
          10) "<the total number of errors issued during all executions of this trigger>"
          11) "total_duration"
-         12) <the aggregated total duration time this trigger run>
+         12) <the aggregated total duration time of all executions of this trigger>
 ``` 
 
 ### Benchmarking (Optional)
