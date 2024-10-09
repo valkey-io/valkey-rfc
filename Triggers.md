@@ -79,7 +79,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
                2) "lpush"
    ```   
    
-   [Valkey keyspace Notifications](https://valkey.io/topics/notifications/) has another major disadvantage: they are not reported on the cluster-bus. While this might have good reasoning (eg avoid cluster-bud load, duplication of events etc...), this makes Valkey clients almost unable to manage key events listeners on Valkey clusters. Valkey triggers can enable the user to decide to publish keyspace events on the cluster bus. This way the trigger code can make smart decisions about publishing of the event and then user the 'PUBLISH' call in order to make the event propagated to all cluster nodes.
+   [Valkey keyspace notifications](https://valkey.io/topics/notifications/) has another major disadvantage: they are not reported on the cluster-bus. While this might have good reasoning (eg avoid cluster-bus load, duplication of events etc...), this makes Valkey clients almost unable to manage key event listeners on Valkey clusters. Valkey triggers can enable the user to decide to publish keyspace events on the cluster bus. This way the trigger code can make smart decisions about publishing of the event and then use the 'PUBLISH' call in order to propagate the event to all cluster nodes.
 
 3. ***Security.*** 
    In some cases there is a need to limit the access to the cache. Currently Valkey provides restricting functionality via [Access Control Lists](https://valkey.io/topics/acl/).
