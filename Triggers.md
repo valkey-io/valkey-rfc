@@ -229,6 +229,6 @@ When Valkey functions and scripts are executed via FCALL/EVAL, it is possible to
 Triggers, however, are silently executing which makes it hard for the user to understand why the trigger did not work and what errors occurred during execution of the trigger.
 The suggestion here is to enable reporting error msg on a predefined pub/sub channel:
 1. All error msgs will be intercepted as deferred errors (much like modules do). 
-2. After trigger completes run, in case errors were issues, it will update the stats with the num,ber of errors.
+2. After trigger completes run, in case errors were issued, it will update the stats with the number of errors.
 3. The trigger will report the errors to a dedicated channel in the following structure:
    `__triggers@errors__:<trigger-name>`
