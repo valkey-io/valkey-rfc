@@ -22,7 +22,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
    This pattern introduces some waste as the application needs to maintain a puller job and perform the round trip back to the application in order to execute the scheduled operations.
    With Valkey triggers this can be achieved without the need for a puller job by the user.
    In order to achieve that we can use:
-   - ZSET z for for holding scheduled tasks
+   - ZSET z for holding scheduled tasks
    - Key k to manage the next task execution time
 
    The external application code will only have to add tasks to the ZSET **z** with score matching their required execution time.
