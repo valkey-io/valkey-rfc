@@ -17,7 +17,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
 1. ***Localized actions.*** 
    Today different application use cases rely on [Valkey keyspace notifications](https://valkey.io/topics/notifications/) in order to manage the database. For example,       consider a case were a key is referenced in different places (like SortedSet and lists). In order to support TTL logic a cleanup needs to be made when the key is evicted to remove it from the different lists or sets. It is possible to have the application listen for eviction events and perform the cleanup, however this would require the application to rely on non-persistent subscribe connections, implement application side logic and extra network hops, which can cause the cleanup to be performed long after the key was evicted.
    For example lets take a commonly used pattern of scheduled tasks.
-   In such cases user usually register tasks in a ZSET with the matching executing time as the score.
+   In such cases the user usually registers tasks in a ZSET with the matching execution time as the score.
    Usually what is being done is setting a puller job in the application side which periodically reads all items in the set which has score smaller than the current timestamp, and issue an eval/fcall back to redis with the relevant task to run. 
    This pattern introduce some waste as the application needs to maintain a puller job and perform the roundtrip back to the application in order to execute the scheduled operations.
    With Valkey triggers this can be achieved without the need to place a puller job by the user.
