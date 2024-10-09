@@ -136,7 +136,7 @@ It means allowing a write call performed in the middle of operating another comm
 There are 2 design options:
 
 1. Post execution of triggers. Much like what was provided for modules with `VM_AddPostNotificationJob`, which was introduced to allow modules to
-perform write operations on keyspace events as part of postExecutionUnitOperations. It is possible to follow the same logic as modules and share the same notification mechanism ie. to operate the trigger operation during the unit operation completion.
+perform write operations on keyspace events as part of postExecutionUnitOperations. It is possible to follow the same logic as modules and share the same notification mechanism ie. to execute the trigger during the unit operation completion.
 This will help prevent breaking atomicity of operations and better follows the way applications are currently reacting to keyspace events. The downside of this option is that since there is no 
 grantee about the state of the data after the operation is completed. 
 
