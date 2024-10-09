@@ -43,7 +43,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
    ```
    fcall every 0 "3" 'redis.call("PUBLISH", "scheduled", "this is an annoying msg")'
    ```
-   Will cause the specified message to be published every 3 seconds.
+   will cause the specified message to be published every 3 seconds.
    Note that the same concept  can be used to implement HASH members eviction!
 
 2. ***Flexibility of extensibility.*** 
