@@ -96,7 +96,7 @@ By building this new logic inside the Valkey function library users will have a 
 ### Triggers as part of function libraries
 Valkey triggers will be implemented as an extension of the Valkey [Function Libraries](https://valkey.io/topics/functions-intro/) .
 A trigger is basically a Valkey function which will be called when some specific keyspace event is issued.
-in order to register a specific function as trigger, one will simply have to use the new **"register_trigger"**  API which will be available for the different library engines. 
+In order to register a specific function as trigger, one will simply have to use the new **"register_trigger"**  API which will be available for the different library engines. 
 For example for the (currently only) LUA engine the registration code will look like:
 
 ![image](https://user-images.githubusercontent.com/88133677/225090299-1cf05508-75e6-43dd-a90f-05ca91dd3a6f.png)
