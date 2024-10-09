@@ -1,5 +1,5 @@
 ---
-RFC: <PR number>
+RFC: 9
 Status: <Proposed>
 ---
 
