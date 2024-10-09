@@ -101,7 +101,7 @@ For example for the (currently only) LUA engine the registration code will look 
 
 ![image](https://user-images.githubusercontent.com/88133677/225090299-1cf05508-75e6-43dd-a90f-05ca91dd3a6f.png)
 
-### Register trigger with named arguments form<
+### Register trigger with named arguments form
  In order to provide some extra arguments to the trigger, the new API will also support the named arguments form. 
  For example:
 
