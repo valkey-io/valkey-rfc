@@ -126,7 +126,7 @@ The **event** and **db** will be supplied in the ARGS array.  (event will be ARG
 Valkey already has a feature to report different [keyspace notifications](https://valkey.io/topics/notifications/) which currently provides the ability to publish keyspace events to registered subscribers. The implementation should introduce the ability to set a trigger function to run on **ANY** event which is defined for [keyspace notifications](https://valkey.io/topics/notifications/).
 
 ### Triggers configuration
-By design Triggers will not require ANY configuration in order to work. The Triggers will be part of the loadable function libraries and should be able to run on the target events even if the user **DID NOT** explicitly configured keyspace-notifications.
+By design Triggers will not require ANY configuration in order to work. The Triggers will be part of the loadable function libraries and should be able to run on the target events even if the user **DID NOT** explicitly configure keyspace-notifications.
 
 ### Atomicity and triggers
 
