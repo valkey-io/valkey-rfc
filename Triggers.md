@@ -38,7 +38,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
    ```
    fcall schedule 0 'server.call("PUBLISH", "scheduled", "this is a msg from the past")' "3"
    ```
-   Will cause publish of a msg after 3 seconds from the time the fcall was processed.
+   will cause the message to be published 3 seconds after the `fcall` is processed.
 
    ```
    fcall every 0 "3" 'redis.call("PUBLISH", "scheduled", "this is an annoying msg")'
