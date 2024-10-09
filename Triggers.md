@@ -19,7 +19,7 @@ As they are being integrated into the Valkey Functions infrastructure, Triggers 
    For example lets take a commonly used pattern of scheduled tasks.
    In such cases the user usually registers tasks in a ZSET with the matching execution time as the score.
    Usually what is being done is setting a puller job in the application side which periodically reads all items in the set which have scores smaller than the current timestamp, and issue eval/fcall commands back to Valkey with the relevant tasks to run. 
-   This pattern introduce some waste as the application needs to maintain a puller job and perform the roundtrip back to the application in order to execute the scheduled operations.
+   This pattern introduces some waste as the application needs to maintain a puller job and perform the round trip back to the application in order to execute the scheduled operations.
    With Valkey triggers this can be achieved without the need to place a puller job by the user.
    In order to achieve that we can use:
    - ZSET z for for holding scheduled tasks
