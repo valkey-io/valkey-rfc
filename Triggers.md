@@ -194,7 +194,7 @@ Much like functions the triggers part will describe a per-trigger information:
           7) "calls"
           8) "<the total number of times the trigger was called>"
           9) "errors"
-         10) "<the total number of errors issued during this trigger run>"
+         10) "<the total number of errors issued during all executions of this trigger>"
          11) "total_duration"
          12) <the aggregated total duration time this trigger run>
 ``` 
