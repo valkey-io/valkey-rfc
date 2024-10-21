@@ -27,15 +27,27 @@ Therefore, we need a proxy to make the customer unaware of the above problems, a
 
 ## Design Considerations  (Required)
 
-1. All Valkey commands should be supported
-2. Provide a connection pool to facilitate client connection
-3. Proxy can automatically handle the primary/replica switchover mode, and the customer is not aware of it
-4. Primary/replica mode and cluster mode support multi-tenant
-5. Support all Valkey commands to count the time consumption in memory: min/max/avg/p95/p99
-6. Multi-database support in cluster mode
-7. For the customer's persistent connection, the proxy will not actively disconnect, but only returns the error message; If the client is disconnected, the connection will be disconnected immediately
-8. Support CLIENT LIST command aggregate return: return the client of all proxy nodes
-9. Some commands such as set and zset are supported for aggregation processing across slot cluster connections 
+1.	Support all existing Valkey commands 
+
+2.	Shield the functional/API differences between cluster mode and primary-replica mode, so that clients do not need to care about the underlying operating mode when using it.
+
+3.	Support multi-tenant mode
+
+4.	Support multi-database mode even server runs as cluster mode
+
+5.	By using Proxy, clients have no perception for server failover, slot migration, adding/removing server nodes, proxy nodes and other exceptions.
+
+6.	Support some enhancement proxy commands to count the time consumption or high CPU cost in memory: min/max/avg/p95/p99
+
+7.	Support audit log and reading/writing separation features
+
+8.	Provide a connection pool to facilitate client connection
+
+9.	For the customer's persistent connection, the proxy will not actively disconnect, but only returns the error message; If the client is disconnected, the connection will be disconnected immediately
+
+10.	Support CLIENT LIST etc commands aggregate return: return the client of all proxy nodes
+
+11.	Some commands such as set and zset are supported for aggregation processing across slot cluster connections
 
 
 ## Specification
