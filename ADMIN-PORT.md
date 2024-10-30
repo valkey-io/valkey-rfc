@@ -34,9 +34,9 @@ Based on all above 3 candidate defects, we decide to select "admin-port" to impl
 
 ## Specification
 
-1. The admin client role is only decided by the cloud provides or internal administrators, whatever where the client comes from. Thus generally, admin-port should not be exposed to public.
+1. The admin client role is only decided by the cloud providers or internal administrators, whatever where the client comes from. Thus generally, admin-port should not be exposed to the public.
 2. If a client connects via admin-port and ACL rules apply to this client as well, this client should follow the ACL to execute some commands
-3. If a client connects via non-admin-port and ACL rules apply to this client as well, this client is not allowed to execute those special commands.
+3. If a client connects via non-admin-port and ACL rules apply to this client as well, this client is not allowed to execute those special commands. The special commands could be new commands introduced by admin through modules, for example, setting/getting traffic/replication control threshold, encrypting the username and password in config file, etc
 
 ## References
 Add a management-port https://github.com/valkey-io/valkey/issues/497
