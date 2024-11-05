@@ -32,7 +32,7 @@ Based on all above 3 candidate defects, we decide to select "admin-port" to impl
 ## Specification
 
 1. The admin client role is only decided by the cloud providers or internal administrators, whatever where the client comes from. Thus generally, admin-port should not be exposed to the public.
-2. For every module, there is the API RedisModule_CreateCommand which defines a function to execute your customize command. You can find a way to decide if the command can be called by the client.
+2. For every module, there is the API RedisModule_CreateCommand which defines a function to execute your customize command. You can find a way to to get the port number that client connects to the server and then to decide if the command can be called by the client.
 3. For those Valkey built-in commands, generally we do not consider Valkey built-in commands as the special commands. Of course, now we can consider FLUSHALL command as an exception.
 4. If a client connects via admin-port and ACL rules apply to this client as well, this client should follow the ACL to execute some commands
 5. If a client connects via non-admin-port and ACL rules apply to this client as well, this client is not allowed to execute those special commands. The special commands could be new commands introduced by admin through modules, for example, setting/getting traffic/replication control threshold, encrypting the username and password in config file, etc
