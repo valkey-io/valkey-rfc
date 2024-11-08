@@ -14,20 +14,20 @@ The proposed ValkeyProxy is to provide the features similar to redis-cluster-pro
 
 When a customer connects directly to the Valkey server, it may encounter the following situations:
 
-a. In primary-replica  mode, the node is switched over from primary to replica, and the client needs to perform special processing
+a. In primary-replica mode, the node is switched over from primary to replica, and the client needs to perform special processing.
 
-b. In cluster mode, if the primary node fails, the customer needs to perform special handling in the process of re-selecting the primary or the process of data migration
+b. In cluster mode, if the primary node fails, the customer needs to perform special handling in the process of re-selecting the primary or the process of data migration.
 
-c. When the primary node processes a large key, it may fail to respond to other nodes for a long time, resulting in disconnection of the client
+c. When the primary node processes a large key, it may fail to respond to other nodes for a long time, resulting in disconnection of the client.
 
-d. When the number of connections to a node exceeds the maximum value, the client may not be able to connect to the primary node
+d. When the number of connections to a node exceeds the maximum value, the client may not be able to connect to the primary node.
 
-Therefore, we need a proxy to make the customer unaware of the above problems, and also to provide some additional Valkey services
+Therefore, we need a proxy to make the customer unaware of the above problems, and also to provide some additional Valkey services.
 
 
 ## Design Considerations  (Required)
 
-1.	Support all existing Valkey commands 
+1.	Support all existing Valkey commands. 
 
 2.	Shield the functional/API differences between cluster mode and primary-replica mode, so that clients do not need to care about the underlying operating mode when using it.
 
@@ -38,7 +38,7 @@ Therefore, we need a proxy to make the customer unaware of the above problems, a
 
         So if the client is only connected to the Proxy instead of server node, then as long as the client is not connected inSentinel mode, then when the client sends a command, it does not need to pay too much attention to the underlying connection mode. The Proxy will handle the execution of different modes for the client.
 
-3.	Support multi-database mode even server runs as cluster mode
+3.	Support multi-database mode even server runs as cluster mode.
 
 4.	By using Proxy, clients have no perception for server failover, slot migration, adding/removing server nodes, proxy nodes and other exceptions.
 
@@ -77,7 +77,7 @@ node. If there are large batches of data operations, the replica may experience 
 obtained by the read operation may be inconsistent with the primary data.
 
 
-8.	Provide a connection pool to facilitate client connection
+8.	Provide a connection pool to facilitate client connection.
 
         Connection pooling can reduce the overhead associated with opening and closing connections and with keeping many 
 connections open simultaneously. This overhead not only includes memory needed to handle each new connection, also involves 
@@ -90,23 +90,16 @@ With multiplexing, the RDS can perform all the operations for a transaction usin
 
         For the client's persistent connection, the connection will not actively disconnect, but only returns the error message; If the client is disconnected actively, the connection will be disconnected immediately.
 
-9.	Support CLIENT LIST etc commands aggregate return: return the client of all proxy nodes
+9.	Support CLIENT LIST etc commands aggregate return: return the client of all proxy nodes.
 
-10.	Some commands such as set and zset are supported for aggregation processing across slot cluster connections
+10.	Some commands such as set and zset are supported for aggregation processing across slot cluster connections.
 
+11.     Support traffic control feature within the proxy.
 
-## Specification
-
-## Authentication and Authorization (Optional)
-## If there are any changes around introducing new ACL command/categories for user access control.
-
-## Configuration (Optional)
-## If there are any configuration changes introduced to enable/disable/modify the behavior of the feature.
-
-## Cluster mode (Optional)
-## If there is any special handling for this feature (e.g., client redirection, Sharded PubSub, etc) in cluster mode or if there are any new cluster bus extensions or messages introduced, list out the changes.
+12.     Support Redisson Distrbution Lock if customer works on cluster mode.
 
 
 ## References
 https://github.com/RedisLabs/redis-cluster-proxy
 https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.howitworks.html
+https://redisson.org/docs/data-and-services/locks-and-synchronizers/
