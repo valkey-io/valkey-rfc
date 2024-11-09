@@ -1,6 +1,6 @@
 ---
-RFC: <PR number>
-Status: <Proposed>
+RFC: (PR number)
+Status: (Change to Proposed when it's ready for review)
 ---
 
 # Title (Required)
