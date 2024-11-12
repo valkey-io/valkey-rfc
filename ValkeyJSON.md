@@ -1,6 +1,6 @@
 ---
 RFC: 2
-Status: Proposed
+Status: Accepted
 ---
 
 # ValkeyJSON RFC
@@ -75,9 +75,15 @@ called KeyTable, which is a sharded hash table storing key tokens and reference 
 
 ### Document Size Limit
 
-Having a limit on json key size is generally considered as a good design. Without the limit, a malicious program can
-repeatedly call "json.arrinsert" or similar commands to make a json key grow forever, leading to OOM. ValkeyJSON will 
-provide a module config - json.max-document-size - to set the size limit.
+We added a limit on JSON key size as a good design practice. Without the limit, a malicious program could repeatedly call 
+"json.arrinsert" or similar commands to make a JSON key grow indefinitely, potentially leading to an out-of-memory (OOM) condition.
+
+The ValkeyJSON module will provide a configuration option, json.max-document-size, that allows users to set a size limit for
+JSON key size.
+
+However, the default value of json.max-document-size will be set to 0, meaning the size of JSON key will be unlimited. 
+This decision is based on the observation that RedisJSON, a related project, does not have a built-in size limit, and 
+the core data types in the Valkey system also do not have such a restriction.
 
 The amount of memory consumed by a JSON document can be inspected by using the `JSON.DEBUG MEMORY` or `MEMORY USAGE` 
 command. `JSON.DEBUG MEMORY <key> [<path>]` can also report the size of a JSON sub-tree.
@@ -906,14 +912,6 @@ Users can subscribe to the JSON events via the standard keyspace event pub/sub. 
 #### Replication
 
 Every JSON write command is replicated to replicas by calling ValkeyModule_ReplicateVerbatim.
-
-## Open Questions
-
-### Regarding the Document Size Limit
-We are considering a review feedback of not enforcing document size limit, because RedisJSON doesn't have the limit and Valkey 
-core data types don't have limits either. There could be two options:
-1. Make the default value of json.max-document-size 0 or -1, meaning unlimited.
-2. Remove the config.
 
 ## References
 
