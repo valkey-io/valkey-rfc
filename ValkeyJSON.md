@@ -81,7 +81,7 @@ We added a limit on JSON key size as a good design practice. Without the limit, 
 The ValkeyJSON module will provide a configuration option, json.max-document-size, that allows users to set a size limit for
 JSON key size.
 
-However, the default value of json.max-document-size will be set to -1, meaning the size of JSON key will be unlimited. 
+However, the default value of json.max-document-size will be set to 0, meaning the size of JSON key will be unlimited. 
 This decision is based on the observation that RedisJSON, a related project, does not have a built-in size limit, and 
 the core data types in the Valkey system also do not have such a restriction.
 
