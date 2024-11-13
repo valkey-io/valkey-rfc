@@ -37,6 +37,48 @@ Based on all above 3 candidate defects, we decide to select "admin-port" to impl
 4. If a client connects via admin-port and ACL rules apply to this client as well, this client should follow the ACL to execute some commands
 5. If a client connects via non-admin-port and ACL rules apply to this client as well, this client is not allowed to execute those special commands. The special commands could be new commands introduced by admin through modules, for example, setting/getting traffic/replication control threshold, encrypting the username and password in config file, etc
 
+## Sample for Module
+Assume we have one module, which only allows the administrator to enable the traffic control command: valkey.traffic.control.enable
+
+step 1: add a new variable in struct connection as: 
+        struct connection {
+            .........
+            int connected_port;
+        }
+
+step 2: create a function getClientConnectedPort(client *c) to get the connected server port for this specific client:
+        int getClientConnectedPort(client *c) {
+            .........
+            return c->conn->connected_port;
+        } 
+
+step 3: create an API in module:
+        int VM_GetClientConnectedPort(ValkeyModuleCtx *ctx) {
+            return getClientConnectedPort(ctx->client);
+        }
+        Thus, module developers can call it to get the client connected server port.
+
+step 4: In the module, we could have the following example: (Here, we assume the admin port is 7001)
+        int valkey_traffic_control_enable(ValkeyModuleCtx *ctx, ValkeyModuleString **argv, int argc) {
+            VALKEYMODULE_NOT_USED(argv);
+            VALKEYMODULE_NOT_USED(argc);
+            int port = ValkeyModule_GetClientConnectedPort(ctx);
+            if (port == 7001) {
+                ValkeyModule_ReplyWithSimpleString(ctx, "You can enable traffic control feature");
+            } else {
+                ValkeyModule_ReplyWithSimpleString(ctx, "You have no permission to execute this command");
+            }
+            return VALKEYMODULE_OK;
+        }
+
+        int ValkeyModule_OnLoad(ValkeyModuleCtx *ctx, ValkeyModuleString **argv, int argc) {
+            ..........
+            if (ValkeyModule_CreateCommand(ctx, "valkey.traffic.control.enable",
+                                                 valkey_traffic_control_enable, "", 0, 0,
+                                                 0) == VALKEYMODULE_ERR)
+            ..........
+        } 
+
 ## References
 Add a management-port https://github.com/valkey-io/valkey/issues/497
 Trusted/un-trusted client feature https://github.com/valkey-io/valkey/issues/469, https://github.com/valkey-io/valkey/pull/666
