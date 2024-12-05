@@ -1,6 +1,6 @@
----
+## RFC: 8
 
-## RFC: Status: Proposed
+## Status: Proposed
 
 
 # Valkey Search RFC
@@ -87,7 +87,7 @@ Binary RDB and replication stream compatibility with Redisearch is not needed, m
 
 - Requirement: Configs like number of threads should be exposed and tunable to users
 
-## Specification
+## Current Specification
 
 The search module allows a user to create any number of indexes. Each index consists of any number of typed fields and covers a specified subset of the keys within a Valkey database.
 
@@ -95,7 +95,29 @@ The creation of an index initiates a backfill process in the background that wil
 
 A query operation is a two step process. In the first step, a query is executed that generates a set of keys and distances. In the second step, that list of keys and distances is used to generate a response.
 
-The first step is performed in a background thread, while the second step must be performed by the mainthread. If a key produced by step 1 is mutated before step 2 is executed by the mainthread, the result of the query may not be consistent with the latest state of the keys.
+The first step is performed in a background thread, while the second step is performed by the mainthread. If a key produced by step 1 is mutated before step 2 is executed by the mainthread, the result of the query may not be consistent with the latest state of the keys.
+
+### Cluster Mode Operation
+
+In cluster mode, indexes are sharded just like data, meaning that each node maintains an index only for the keys that are present on that node.
+This means for that for data mutation operations, no cross-cluster communication is required, each node simply updates it's local index to reflect the mutation of the local key.
+
+Query operations are accepted by any node in the cluster and that node is responsible for broadcasting the query across the cluster and merging the results for delivery to the client.
+Cross-client communication uses gRPC and protobufs and does not require mainthread interaction.
+
+Similar to query operations, index metadata operations, i.e., `FT.CREATE` and `FT.DROPINDEX` are accepted by any node in the cluster and broadcast to every other node in the cluster using gRPC.
+Eventual consistency of index metadata amongst the cluster nodes is maintained through the use of the cluster bus. 
+Periodically, a checksum of the index metadata is broadcast across the cluster such that inconsistent metadata can be detected and corrected.
+
+The `FT.INFO` command returns information only for the current node.
+
+## Current Restrictions
+
+- `FT.SEARCH` can not be executed within a LUA function.
+- `FT.SEARCH` assumes that READONLY has been specified, meaning that broadcasts across the cluster may select either primaries or replicas for each shard.
+- The RDB file format is not compatible with Redisearch
+- ACLs are not supported
+
 
 ### Commands
 
@@ -114,13 +136,16 @@ FT.CREATE <index-name>
 
 The `FT.CREATE` command creates an empty index and initiates the backfill process. Each index consists of a number of field definitions. Each field definition specifies a field name, a field type and a path within each indexed key to locate a value of the declared type. Some field type definitions have additional sub-type specifiers.
 
-For indexes on HASH keys, the path is the same as the hash member name. The optional `AS` clause can be used to rename the field if desired. This is especially useful when the member name contains special characters.
+For indexes on HASH keys, the path is the same as the hash member name. The optional `AS` clause can be used to rename the field if desired. 
+Renaming of fields is especially useful when the member name contains special characters.
+
+For indexes on JSON keys, the path is a JSON path to the data of the declared type. Because the JSON path always contains special characters, the `AS` clause is required.
 
 - **\<index-name\>** (required): This is the name you give to your index. If an index with the same name exists already, an error is returned.  
     
-- **ON HASH** (optional): Only keys that match the specified type are included into this index. If omitted, HASH is assumed.  
+- **ON HASH | JSON** (optional): Only keys that match the specified type are included into this index. If omitted, HASH is assumed.  
     
-- **PREFIX \<prefix-count\> \<prefix\>** (optional): If this clause is specified, then only keys that begin with the same bytes as one or more of the specified prefixes will be included into this index. If this clause is omitted, all keys of the correct type will be included. A zero-length prefix would also match all keys of the correct type.  
+- **PREFIX \<prefix-count\> \<prefix\>** (optional): If this clause is specified, then only keys that begin with the same bytes as one or more of the specified prefixes will be included into this index. If this clause is omitted, all keys of the correct type will be included. A zero-length prefix would also match all keys of the correct type.
     
 - Field types:  
     
@@ -129,7 +154,7 @@ For indexes on HASH keys, the path is the same as the hash member name. The opti
     - **SEPARATOR \<sep\>** (optional): One of these characters `,.<>{}[]"':;!@#$%^&*()-+=~` used to delimit individual tags. If omitted the default value is `,`.  
     - **CASESENSITIVE** (optional): If present, tag comparisons will be case sensitive. The default is that tag comparisons are NOT case sensitive
 
-    
+  
 
   - **NUMERIC** Field contains a number.  
       
@@ -145,9 +170,9 @@ For indexes on HASH keys, the path is the same as the hash member name. The opti
       - **TYPE FLOAT32** (required): Data type, currently only FLOAT32 is supported.  
       - **DISTANCE\_METRIC \[L2 | IP | COSINE\]** (required): Specifies the distance algorithm  
       - **INITIAL\_CAP \<size\>** (optional): Initial index size.  
-      - **M \<number\>** (optional): Number of maximum allowed outgoing edges for each node in the graph in each layer. on layer zero the maximal number of outgoing edges will be 2\*M. Default is 16 Maximum is 512\.  
+      - **M \<number\>** (optional): Number of maximum allowed outgoing edges for each node in the graph in each layer. on layer zero the maximal number of outgoing edges will be 2\*M. Default is 16, the maximum is 512\.  
       - **EF\_CONSTRUCTION \<number\>** (optional): controls the number of vectors examined during index construction. Higher values for this parameter will improve recall ratio at the expense of longer index creation times. The default value is 200\. Maximum value is 4096\.  
-      - **EF\_RUNTIME \<number\>** (optional):  Sets the count of vectors to be examined during a query operation. The default is 10, and the max is 4096\. You can set this parameter value for each query you run. Higher values increase query times, but improve query recall.
+      - **EF\_RUNTIME \<number\>** (optional):  controls  the number of vectors to be examined during a query operation. The default is 10, and the max is 4096\. You can set this parameter value for each query you run. Higher values increase query times, but improve query recall.
 
 **RESPONSE** OK or error.
 
@@ -223,7 +248,8 @@ Performs a search of the specified index. The keys which match the query express
 - **\<query\>** (required): The query string, see below for details.  
 - **NOCONTENT** (optional): When present, only the resulting key names are returned, no key values are included.  
 - **TIMEOUT \<timeout\>** (optional): Lets you set a timeout value for the search command. This must be an integer in milliSeconds.  
-- **PARAMS \<count\> \<name1\> \<value1\> \<name2\> \<value2\> ...** (optional): `count` is of the number of arguments, i.e., twice the number of value name pairs. See the query string for usage details.  
+- **PARAMS \<count\> \<name1\> \<value1\> \<name2\> \<value2\> ...** (optional): `count` is of the number of arguments, i.e., twice the number of value name pairs. See the query string for usage details.
+- **RETURN \<count\> \<field1\> \<field2\> ...** (options): `count` is the number of fields to return. Specifies the fields you want to retrieve from your documents, along with any aliases for the returned values. By default, all fields are returned unless the NOCONTENT option is set, in which case no fields are returned. If num is set to 0, it behaves the same as NOCONTENT.
 - **LIMIT \<offset\> \<count\>** (optional): Lets you choose a portion of the result. The first `<offset>` keys are skipped and only a maximum of `<count>` keys are included. The default is LIMIT 0 10, which returns at most 10 keys.  
 - **DIALECT \<dialect\>** (optional): Specifies your dialect. The only supported dialect is 2\.
 
@@ -231,28 +257,32 @@ Performs a search of the specified index. The keys which match the query express
 
 The command returns either an array if successful or an error.
 
-If `NOCONTENT` is specified, then the output is .....
+On success, the first entry in the response array represents the count of matching keys, followed by one array entry for each matching key. 
+Note that if  the `LIMIT` option is specified it will only control the number of returned keys and will not affect the value of the first entry.
 
-If `NOCONTENT` is not specified, then the output is an array of (2\*N)+1 entries, where N is the number of keys output from the search. The first entry in the array is the value N which is followed by N pairs of entries, one per key found. Each pair of entries consists of the key name followed by an array which is the result value for that key.
+When `NOCONTENT` is specified, each entry in the response contains only the matching keyname, Otherwise, each entry includes the matching keyname, followed by an array of the returned fields.
 
-The result value for a key consists of a set of name/value pairs. The first name/value pair is for the distance computed. The name of this pair is constructed from the vector field name prepended with "\_\_" and appended with "\_score" and the value is the computed distance. The remaining name/value pairs are the members and values of the result key.
+The result fields for a key consists of a set of name/value pairs. The first name/value pair is for the distance computed. The name of this pair is constructed from the vector field name prepended with "\_\_" and appended with "\_score" and the value is the computed distance. The remaining name/value pairs are the members and values of the key as controlled by the `RETURN` clause.
 
 The query string conforms to this syntax:
 
 ```
-(* | <filter_expression>)=>[ KNN <K> @<vector_field_name> $<vector_parameter_name> ]
+<filtering>=>[ KNN <K> @<vector_field_name> $<vector_parameter_name> <query-modifiers> ]
 ```
 
 Where:
 
+- **\<filtering\>** Is either a `*` or a filter expression. A `*` indicates no filtering and thus all vectors within the index are searched. A filter expression can be provided to designate a subset of the vectors to be searched.
 - **\<vector\_field\_name\>** The name of a vector field within the specified index.  
 - **\<K\>** The number of nearest neighbor vectors to return.  
 - **\<vector\_parameter\_name\>** A PARAM name whose corresponding value provides the query vector for the KNN algorithm. Note that this parameter must be encoded as a 32-bit IEEE 754 binary floating point in little-endian format.  
-- **\*  or \<filter\_expression\>** A \* indicates no filtering and all vectors within the index are searched. A filter expression can be provided to designate a subset of the vectors to be searched.
+- **\<query-modifiers\>** (Optional) A list of keyword/value pairs that modify this particular KNN search. Currently two keywords are supported:
+  - **EF_RUNTIME** This keyword is accompanied by an integer value which overrides the default value of **EF_RUNTIME** specified when the index was created.
+  - **AS** This keyword is accompanied by a string value which becomes the name of the score field in the result, overriding the default score field name generation algorithm.
 
 **Filter Expression**
 
-A filter expression is constructed as a logical combination of Tag and Numeric search operators.
+A filter expression is constructed as a logical combination of Tag and Numeric search operators contained within parenthesis.
 
 **Tag**
 
@@ -332,6 +362,10 @@ The following query will return all books with "comedy" genre that are not publi
 
 @genre:\[comedy\] \-@year:\[2015 2024\]
 
+**Operator Precedence**
+
+Typical operator precedence rules apply, i.e., Logical negate is the highest priority, followed by Logical and and then Logical Or with the lowest priority. Parenthesis can be used to override the default precedence rules.
+
 **Examples of Combining Logical Operators**
 
 Logical operators can be combined to form complex filter expressions.
@@ -374,7 +408,7 @@ The following metrics are added to the INFO command.
 - **search\_total\_indexed\_hash\_keys**	(Integer)	Total count of HASH keys for all indexes  
 - **search\_number\_of\_indexes**	(Integer)	Index schema total count  
 - **search\_number\_of\_attributes**	(Integer)	Total count of attributes for all indexes  
-- **search\_failure\_requests\_count**	(Integer)	A count of all failed requests  
+- **search\_failure\_requests\_count**	(Integer)	A count of all failed requests, including syntax errors.
 - **search\_successful\_requests\_count**	(Integer)	A count of all successful requests  
 - **search\_used\_memory\_human**	(Integer)	A human-friendly readable version of the search\_used\_memory\_bytes metric  
 - **search\_used\_memory\_bytes**	(Integer)	The total bytes of memory that all indexes occupy  
@@ -403,7 +437,7 @@ Google Cloud Blogs
 
 Google Cloud Docs
 
-- [https://cloud.google.com/memorystore/docs/redis/about-vector-search](https://cloud.google.com/memorystore/docs/redis/about-vector-search)
+- [https://cloud.google.com/memorystore/docs/cluster/about-vector-search](https://cloud.google.com/memorystore/docs/cluster/about-vector-search)
 
 AWS Blogs
 
