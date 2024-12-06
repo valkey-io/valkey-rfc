@@ -455,7 +455,8 @@ A complete list of supported RediSearch commands can be found [here](https://red
 - [FT.EXPLAIN](https://redis.io/docs/latest/commands/ft.explain/): Analyzes and explains the query execution plan, providing insights into how Redisearch will process a given search query.
 
 
-Unsupported Knobs & Controls
+**Unsupported Knobs & Controls**
+
 The current implementation covers only a subset of the controls for FT.SEARCH and FT.CREATE. A complete list of supported commands and features can be found here:
 - [FT.SEARCH](https://redis.io/docs/latest/commands/ft.search/) 
 - [FT.CREATE](https://redis.io/docs/latest/commands/ft.create/)
