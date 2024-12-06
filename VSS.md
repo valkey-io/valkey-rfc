@@ -428,6 +428,40 @@ The following metrics are added to the INFO command.
 - **search\_modify\_subscription\_failure\_count**	(Integer)	Count of failed subscription modifications  
 - **search\_modify\_subscription\_successful\_count**	(Integer)	Count of successful subscription modifications
 
+### Key Functionality Gaps Relative to RediSearch 
+
+RediSearch provides extended searching capabilities developed over several years. The following outlines the key gaps: 
+
+**Unsupported Index Types**
+- [Full-Text](https://redis.io/docs/latest/develop/interact/search-and-query/query/full-text/): Allows fast querying of textual data, supporting features such as  exact phrase matching, prefix matching, fuzzy matching and more. 
+- [Geospatial](https://redis.io/docs/latest/develop/interact/search-and-query/query/geo-spatial/): Allows storing, querying, and manipulating location-based data such as radius queries, nearest neighbor searches, and distance calculations, leveraging sorted sets and geohashes.
+
+**Functionality Gaps**
+- Non-vector queries: Currently, non-vector indexes are utilized only within the context of vector search queries. Expanding support to standalone non-vector use cases broadens applicability. For instance, a query could search for products priced within a specific range, tagged as "sport," and with a title containing the word "basketball." An example syntax for such a query might look like:  
+
+```
+FT.SEARCH index_name "@price:[min max] @tags:{sport} @title:basketball"
+```
+
+- ACLs: allowing query and index operations to respect the permissions configured for each user.
+
+**Unsupported Commands**
+
+A complete list of supported RediSearch commands can be found [here](https://redis.io/docs/latest/commands/?alpha=ft). The following outlines the key missing ones:
+
+- [FT.AGGREGATE](https://redis.io/docs/latest/commands/ft.aggregate/): Extends the query capabilities with the ability to perform aggregation transformation. 
+- FT.ALIAS[[ADD](https://redis.io/docs/latest/commands/ft.aliasadd/), [UPDATE](https://redis.io/docs/latest/commands/ft.aliasupdate/), [DELETE](https://redis.io/docs/latest/commands/ft.aliasdel/)]: Allows managing aliases for existing indexes.
+- [FT.PROFILE](https://redis.io/docs/latest/commands/ft.profile/): Allows measuring and reporting the execution time and various stages of a query, helping to optimize and debug performance.
+- [FT.EXPLAIN](https://redis.io/docs/latest/commands/ft.explain/): Analyzes and explains the query execution plan, providing insights into how Redisearch will process a given search query.
+
+
+Unsupported Knobs & Controls
+The current implementation covers only a subset of the controls for FT.SEARCH and FT.CREATE. A complete list of supported commands and features can be found here:
+- [FT.SEARCH](https://redis.io/docs/latest/commands/ft.search/) 
+- [FT.CREATE](https://redis.io/docs/latest/commands/ft.create/)
+
+
+
 ## Appendix 
 
 Google Cloud Blogs
