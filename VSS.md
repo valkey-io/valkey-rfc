@@ -430,11 +430,11 @@ The following metrics are added to the INFO command.
 
 ### Key Functionality Gaps Relative to RediSearch 
 
-RediSearch provides extended searching capabilities developed over several years. The following outlines the key gaps: 
+ValkeySearch's current focus is primarily on vector search, leveraging a robust foundation designed for extensibility. It is highly optimized for performance, delivering nearly linear scaling with an increasing number of CPU cores. Furthermore, ValkeySearch employs advanced techniques such as deduplication and string interning to maintain a low memory footprint. However, RediSearch, developed over several years, offers a more comprehensive feature set. The following outlines the key gaps:  
 
 **Unsupported Index Types**
-- [Full-Text](https://redis.io/docs/latest/develop/interact/search-and-query/query/full-text/): Allows fast querying of textual data, supporting features such as  exact phrase matching, prefix matching, fuzzy matching and more. 
-- [Geospatial](https://redis.io/docs/latest/develop/interact/search-and-query/query/geo-spatial/): Allows storing, querying, and manipulating location-based data such as radius queries, nearest neighbor searches, and distance calculations, leveraging sorted sets and geohashes.
+- Full-Text: Allows fast querying of textual data, supporting features such as  exact phrase matching, prefix matching, fuzzy matching and more. 
+- Geospatial: Allows storing, querying, and manipulating location-based data such as radius queries, nearest neighbor searches, and distance calculations, leveraging sorted sets and geohashes.
 
 **Functionality Gaps**
 - Non-vector queries: Currently, non-vector indexes are utilized only within the context of vector search queries. Expanding support to standalone non-vector use cases broadens applicability. For instance, a query could search for products priced within a specific range, tagged as "sport," and with a title containing the word "basketball." An example syntax for such a query might look like:  
@@ -447,20 +447,54 @@ FT.SEARCH index_name "@price:[min max] @tags:{sport} @title:basketball"
 
 **Unsupported Commands**
 
-A complete list of supported RediSearch commands can be found [here](https://redis.io/docs/latest/commands/?alpha=ft). The following outlines the key missing ones:
+- FT.AGGREGATE: Allows running aggregation queries on an index, returning grouped and processed results.
+- FT.ALIAS[ADD, UPDATE, DELETE]: Allows managing aliases for existing indexes.
+- FT.PROFILE: Enables running a query while collecting and displaying execution details.
+- FT.EXPLAIN: Enables viewing the query execution plan for debugging purposes.
+- FT.EXPLAINCLI: Allows CLI-friendly query explanation output.
+- FT.ALTER: Enables modification of an existing index by adding new fields.
+- FT.SYNUPDATE, FT.SYNDUMP, FT.TAGVALS: Tag and synonym management.
+- FT.CURSOR: Allows management of aggregation cursors (e.g., read, delete).
+- FT.CONFIG: Enables configuration of server-wide or index-specific parameters.
+- FT.SUG[ADD, GET, DEL, LEN]: Suggestion management
 
-- [FT.AGGREGATE](https://redis.io/docs/latest/commands/ft.aggregate/): Extends the query capabilities with the ability to perform aggregation transformation. 
-- FT.ALIAS[[ADD](https://redis.io/docs/latest/commands/ft.aliasadd/), [UPDATE](https://redis.io/docs/latest/commands/ft.aliasupdate/), [DELETE](https://redis.io/docs/latest/commands/ft.aliasdel/)]: Allows managing aliases for existing indexes.
-- [FT.PROFILE](https://redis.io/docs/latest/commands/ft.profile/): Allows measuring and reporting the execution time and various stages of a query, helping to optimize and debug performance.
-- [FT.EXPLAIN](https://redis.io/docs/latest/commands/ft.explain/): Analyzes and explains the query execution plan, providing insights into how Redisearch will process a given search query.
 
 
 **Unsupported Knobs & Controls**
 
 The current implementation covers only a subset of the controls for FT.SEARCH and FT.CREATE. A complete list of supported commands and features can be found here:
-- [FT.SEARCH](https://redis.io/docs/latest/commands/ft.search/) 
-- [FT.CREATE](https://redis.io/docs/latest/commands/ft.create/)
 
+**FT.SEARCH**
+
+- SORTBY: Allows sorting the results based on a specific sortable field in ascending or descending order.
+- WITHSCORES: Enables returning the score of each result alongside the document, which indicates its relevance.
+- WITHPAYLOADS: Allows retrieving the payloads associated with documents, if they exist.
+- WITHSORTKEYS: Enables returning the sort keys used for ordering results when the SORTBY option is used.
+- HIGHLIGHT: Allows marking matching text fragments in the results for easier identification using a custom tag.
+- SUMMARIZE: Enables returning a summarized version of document fields, specifying the number of fragments and length.
+- INKEYS: Allows restricting the search to a specific set of document keys.
+- INFIELDS: Enables limiting the search to specified fields in the index schema.
+- LANGUAGE: Enables specifying the language for stemming and query parsing.
+- EXPANDER: Allows using a custom query expander to modify the query before execution.
+- SCORER: Enables specifying a custom scoring function to influence the order of the results.
+- VERBATIM: Allows disabling query expansion and stemming, ensuring an exact match for the terms.
+- NOSTEM: Enables disabling stemming for individual terms in the query, preserving their original form.
+- INORDER: Allows requiring that query terms appear in the same order as specified in the query.
+- SLOP: Enables setting the maximum number of intervening terms allowed between query terms for phrase matching.
+- EXPLAINSCORE: Allows returning an explanation of the score for each result to understand its relevance.
+
+**FT.CREATE**
+
+- LANGUAGE: Enables setting the default language for query parsing and stemming when none is specified.
+- LANGUAGE_FIELD: Allows designating a field in the document to specify the language for stemming.
+- SCORE: Enables setting a default score for documents in the index to prioritize relevance.
+- SCORE_FIELD: Allows specifying a document field to provide a custom score dynamically.
+- PAYLOAD_FIELD: Enables specifying a field in the document to store arbitrary payload data for each document.
+- MAXTEXTFIELDS: Allows enabling support for more than 32 text fields in the schema.
+- TEMPORARY: Enables creating a temporary index that expires after a specified number of seconds.
+- NOOFFSETS: Allows disabling offset data for text fields, reducing memory usage at the cost of missing term highlighting and exact snippet matching.
+- NOHL: Enables disabling support for highlighting, which saves memory but removes term highlighting capabilities.
+- NOFIELDS: Allows disabling the return of document fields, reducing memory and network usage.
 
 
 ## Appendix 
