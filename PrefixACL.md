@@ -66,14 +66,18 @@ enum KeyPrefixCheckFlags {
     VALKEYMODULE_PREFIX_CHECK_READ_ACCESS = 1,
 }
 
-int ValkeyModule_AclCheckKeyPrefixPermissions(ValkeyModuleContext *ctx, const char *prefix, size_t bytes, size_t flags)
+int ValkeyModule_AclCheckKeyPrefixPermissions(
+    ValkeyModuleContext *ctx, 
+    ValkeyModuleString **prefixes,
+    size_t prefix_count,
+    size_t flags)
 ```
 
-The ```prefix``` parameter points to the byte string to check with its length specified by the ```bytes``` parameter.
+The ```prefixes``` parameter points to an array of byte strings to check. The number of elements in the array is in the prefix_count parameters.
 The ```flags``` indicates the type of access for the check. Currently only one flag is defined and it must be specified.
 
 The return value indicates whether access is permitted (C_OK) or not (C_ERR) for the current user.
 This API doesn't log anything or generate any security error message, that's the responsibility of the caller.
 
-The implementation of this command is straightforward. The prefix is matched against each key pattern in turn, if the pattern doesn't match the entire prefix (either with explicit characters or with globing) or if there are non-wildcard characters after the prefix then the match fails and C_ERR is returned.
+The implementation of this command is straightforward. Each prefix is matched against each key pattern in turn, if the pattern doesn't match the entire prefix (either with explicit characters or with globing) or if there are non-wildcard characters after the prefix then the match fails and C_ERR is returned.
 Only if all of the patterns pass the test is C_OK returned.
