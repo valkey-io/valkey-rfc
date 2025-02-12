@@ -499,6 +499,18 @@ The current implementation covers only a subset of the controls for FT.SEARCH an
 
 ## Appendix 
 
+### ACL Categories
+A new ACL category @search will be created by the module. the following table descripes the categories for all new commands.
+
+| Command | @search | @read | @write | @fast | @slow |
+| --- | --- | --- | --- | --- | --- |
+|FT.CREATE| Y | N | Y | Y | N |
+|FT._LIST | Y | Y | N | Y | N |
+|FT.INFO  | Y | Y | N | Y | N |
+|FT.SEARCH| Y | Y | N | N | Y |
+
+
+
 Google Cloud Blogs
 
 - [https://cloud.google.com/blog/products/databases/memorystore-for-redis-vector-search-and-langchain-integration](https://cloud.google.com/blog/products/databases/memorystore-for-redis-vector-search-and-langchain-integration)  
