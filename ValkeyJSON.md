@@ -32,8 +32,7 @@ Redis Ltd.’s RedisJSON.
 
 ### RDB Compatibility
 
-To help users migrate from Redis and RedisJSON, ValkeyJSON will support RDB compatibility with RedisJSON. ValkeyJSON will 
-be able to load RDBs generated from RedisJSON. Likewise, RedisJSON will be able to load RDBs generated from ValkeyJSON.
+ValkeyJSON is RDB compatible with Redis Ltd.’s RedisJSON v1.0.8 or later.
 
 ### Choice of JSON Library
 
