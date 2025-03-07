@@ -1,5 +1,5 @@
 ---
-RFC: (PR number)
+RFC: #20
 Status: Proposed
 ---
 
@@ -21,75 +21,76 @@ Organizations running Valkey in enterprise environments frequently need to integ
 - maintaining Valkey's existing authenthication workflow
 - supporting compliance requirements for centralized authentication
 
-The work done in this Redis Pull Request #11659 means authentication can be handed of to a Valkey module without affecting the Valkey core authentication.
+The Valkey Module API already supports the offloading of user authentication to an external module, we will make use of this API to implement the LDAP authentication module.
+
 
 ## Design considerations
 
-### Performance Impact
+This module will support the two traditional approaches to authenticate users against an LDAP server:
+* The *bind* approach.
+* The *search/compare* approach.
 
-- Minimize authentication overhead through efficient caching
-- Optimize LDAP queries and connection management
-- Implement connection pooling to reduce latency
-- Balance security with performance requirements
-- Ensure minimal impact on Valkey command execution
+The bind approach is preferred since the password stored in the LDAP server is never sent to clients. This approach makes use of the LDAP BIND operation that receives the user DN and a password, and the LDAP server performs the password validation against its own records. The response of the BIND operation is either that the user is successfully authenticated or not.
 
-### Scalability
+The search approach can be used when the BIND operation is disabled for regular users, and only an admin account can be used to bind to the LDAP server. In this approach, an admin connection is bound to the LDAP server, and then performs a SEARCH operation to check if the user exists, and if that is the case, retrieves the password of the user to compare it with the password given by the user.
 
-- Support for large user bases and group hierarchies
-- Efficient handling of concurrent authentication requests
-- Horizontal scalability in clustered environments
-- Resource usage optimization for high-load scenarios
-- Graceful degradation under heavy load
+It's important that when using the search approach, the connection to the LDAP server must have TLS enabled to avoid the user password to be transmitted in plain text through the network.
 
-### Security
+The module implementation will use the `ValkeyModule_RegisterAuthCallback` API function to register the entrypoint of the LDAP authentication workflow.
 
-- Zero trust security model implementation
-- Secure credential handling and storage
-- Protection against common attack vectors
-- Audit trail for authentication events
-- TLS 1.2+ required for AD communication
-- Certificate validation
-- Secure credential storage
-- Encrypted cache entries
+In a first stage of the module implementation, the module will support a minimal set of features and requirements to successfully handle LDAP authentication queries in a production evironment, namely:
 
-### Maintainability
+* Perfomance
+  * Memory caching of authentication authorizations
+  * Connection pooling to reduce latency
+* Scalability
+  * Efficient handling of concurrent authentication requests
+  * Asynchronous communication with LDAP servers
+* Security
+  * Secure credential handling and storage
+  * TLS 1.2+ support
+  * Audit trail for authentication events
+* Maintainability
+  * Comprehensive logging and monitoring
+  * Comprehensive error handling
+* Compatibility
+  * Compatibility with existing Valkey clients
+* High Availabilty
+  * Multiple identity provider server support
+  * Server connection failover
+* Configuration
+  * LDAP server connection (address, port, ssl)
+  * LDAP authentication method (bind, or search)
+  * LDAP Bind DN
+  * LDAP Bind PW
+  * LDAP search Base DN
+  * LDAP User filter pattern
+  * Server connection timeout
+  * Search operation timeout
+  * TLS cert configs
 
-- Clear separation of concerns
-- Modular design for easy updates and inclusion of new protocols
-- Comprehensive logging and monitoring
-- Simple configuration management
-- Easy troubleshooting and debugging
+### LDAP and Valkey User Mapping
 
-### Compatibility
+The way the Valkey module API supports external authentication mechanisms is by offloading the authorization part to the module but it requires the user to have been created in Valkey previously. A user account in Valkey is often referred as ACL user.
 
-- Support for various Valkey deployment models
-- Backward compatibility with existing Valkey features
-- Integration with different LDAP providers
-- Support for multiple authentication methods
-- Compatibility with existing Valkey clients
+When the module performs the LDAP authentication process and gets the successful authorization it must call the `ValkeyModule_AuthenticateClientWithACLUser` API function, which associates the existing ACL user with the current client connection.
 
-### High Availabilty
+Therefore, there must exist a mapping between the LDAP user and the ACL user.
 
-- Multiple identity provider server support
-- Connection failover
-- Cache replication
-- Graceful degradation
+In a first stage of the module implementation we will just support the simplest mapping method that only requires an existing ACL user to exist with the same username as the LDAP user being authenticated.
 
-### Error Handling
+System administrators must ensure that the LDAP users also exist in Valkey with the proper permissions configured.
 
-- Invalid credentials
-- Network timeouts
-- LDAP server unavailable
-- Cache corruption
-- Configuration errors
-- Group resolution failures
+In a later stage we can develop different kinds of mapping mechanisms, where, for instance, the mapping can be specified in a file.
+
+Another possibility for the future is to create a module command that helps system administrators to create ACL users based on the list of users present in the LDAP server.
 
 ## Specification
 
 ### Authentication flow
 
-1. Client sends AUTH command
-2. Module extracts username/password
+1. Client sends AUTH/HELLO command
+2. Module auth callback is called with username/password
 3. Check credential cache
 4. If not cached:
     - connect to LDAP server
@@ -100,124 +101,94 @@ The work done in this Redis Pull Request #11659 means authentication can be hand
 5. Pass AUTH/NOAUTH to Valkey core
 6. Return auth response
 
+The operations done in step 4 should be executed asynchronously in order to track the time that is taking for authenticating the user.
+
+If the authentication process is taking longer than a specific threshold, the module should make use of the Blocking Client Module APIs, in particular using the `ValkeyModule_BlockClientOnAuth` function, to continue the authentication process in the background and allow the Valkey main event loop to continue processing other client commands.
+
+The revised authentication flow steps in a long running authentication process would be:
+
+1. Client sends AUTH/HELLO command
+2. Module auth callback is called with username/password
+3. Check credential cache
+4. If not cached, run asynhcronously in a side thread:
+    - connect to LDAP server
+    - perform bind operation
+    - search for user group membership
+    - cache successful result
+    - set TTL
+    - If client is blocked, call `ValkeyModule_UnblockClient`
+5. If step 4 taking a long time:
+    - Call `ValkeyModule_BlockClientOnAuth` and signal authentication thread
+5. Pass AUTH/NOAUTH to Valkey core
+6. Return auth response
+
+During the authentication flow, if a network error occurs, the Valkey authentication request will fail, and more detailed error description will be logged in the server log.
+
+A user can also issue the `LDAP.STATUS` command to check if the module was able to establish a connection with the configured servers.
+
 ### On module load
 
-- Load configuration from Valkey config or default values
-- Initialize data structures and connection pools
-- Register command hooks with valkey core
-- Establish initial LDAP server connections
-- Load cached credentials if persistence enabled
-- Register monitoring callbacks
+Upon the module load operation we'll run the following procedures:
 
-### Commands 
+1. Load configuration from Valkey config or default values
+2. Initialize data structures and connection pools
+3. Establish initial LDAP server connections
+4. Register command hooks with valkey core
 
-1 LDAP.CONFIG SET <parameter> <value>
+### Commands
 
-- Sets configuration parameters for the LDAP authentication module
-- Parameters include server addresses, timeouts, cache settings, etc.
-- Returns simple string reply: OK on success
+The configuration options of this module will be set using the standard `CONFIG SET` command.
 
-2 LDAP.CONFIG GET <parameter>
+The only commands exported by this module are:
 
-- Gets current configuration for specified parameter
-- Returns bulk string reply: parameter value
+* `LDAP.RELOAD`
+  - Reloads configuration from config file
+  - Reestablishes connections with LDAP servers
+  - Returns simple string reply: OK on success
 
-3 LDAP.RELOAD
+* `LDAP.STATUS`
+  - Returns health and statistics information
+  - Format: nested hash with connection states, cache stats, auth counts
 
-- Reloads configuration from config file
-- Reestablishes connections with LDAP servers
-- Returns simple string reply: OK on success
+* `LDAP.FLUSHCACHE`
+  - Clears the credential cache
+  - Options to flush all or specific users
+  - Returns integer reply: number of entries flushed
 
-4 LDAP.STATUS
-
-- Returns health and statistics information
-- Format: nested hash with connection states, cache stats, auth counts
-
-5 LDAP.FLUSHCACHE
-
-- Clears the credential cache
-- Options to flush all or specific users
-- Returns integer reply: number of entries flushed
-
-### Valkey Command Hooks
-
-#### Authentication Command Hook
-
-- Intercepts AUTH command
-- Processes credentials through LDAP binding
-- Maintains original Valkey auth functionality for local accounts
-
-#### ACL Command Hook
-
-- Integrates with ACL commands
-- Maps LDAP groups to Valkey ACLs
-- Preserves ACL inheritance and evaluation logic
-
-### Internal data structures
-
-#### Configuration Store
-
-- Hash table for configuration parameters
-- Persistent across restarts via RDB or config file
-- Thread-safe access with read-write locks
-
-#### Credential Cache
-
-- LRU cache with configurable TTL
-- Encrypted storage with secure key management
-- Size-limited with automatic eviction
-- Concurrent access optimized
-
-#### Group Mapping Table
-
-- Hash table mapping LDAP groups to Valkey ACLs
-- Configurable refresh interval
-- Support for nested group resolution
-
-#### Connection Pool
-
-- LDAP connection objects with state tracking
-- Priority queue based on connection health
-- Automatic connection cycling
-- Size limits and idle timeouts
 
 ### Configuration
 
-#### Server Configuration
+The configuration options for this module will be registered using the `ValkeyModule_RegisterStringConfig` API function, which will allow the user to set and get the options using the `CONFIG SET` and `CONFIG GET` commands.
 
-- LDAP.servers: list of LDAP server addresses (comma-separated)
-- LDAP.port: LDAP port (default: 636 for LDAPS)
-- LDAP.use_ssl: whether to use LDAPS (default: true)
-- LDAP.timeout.connect: connection timeout in ms (default: 1000)
-- LDAP.timeout.search: search operation timeout in ms (default: 2000)
-- LDAP.retry.max: maximum retry attempts (default: 3)
-- LDAP.retry.delay: delay between retries in ms (default: 500)
+The list of configuration options is the following:
 
-#### Authentication Configuration
+- General options
+  - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search`.
+  - `ldap.servers`: list of LDAP server addresses (comma-separated) where each server address has following format `ldap[s]://<hostname>[:<port>][/<dn>]`
+    - The default port for `ldap` protocol is 389
+    - The default port for `ldaps` protocol is 636
+  - `ldap.timeout.connect`: connection timeout in ms (default: 1000)
+  - `ldap.timeout.search`: search operation timeout in ms (default: 2000)
+  - `ldap.binddn`: service account DN for initial bind
+  - `ldap.bindpw`: service account password (stored securely)
+  - `ldap.search.basedn`: base DN for user searches
+  - `ldap.search.user_filter`: LDAP filter for user searches
+  - `ldap.search.group_filter`: LDAP filter for group membership queries
 
-- LDAP.basedn: base DN for user searches
-- LDAP.binddn: service account DN for initial bind
-- LDAP.bindpw: service account password (stored securely)
-- LDAP.user_filter: LDAP filter for user searches
-- LDAP.group_filter: LDAP filter for group membership queries
-- LDAP.default_permissions: default ACL for authenticated users
+- Cache options
+  - `ldap.cache.enabled`: enable credential caching (default: true)
+  - `ldap.cache.ttl`: cache entry TTL in seconds (default: 300)
+  - `ldap.cache.size`: maximum cache size (default: 10000)
 
-#### Cache Configuration
+- TLS options
+  - `ldap.tls.cert`: path to client certificate
+  - `ldap.tls.key`: path to client key
+  - `ldap.tls.ca`: path to CA certificate
+  - `ldap.tls.verify`: verify server certificates (default: true)
+  - `ldap.tls.ciphers`: allowed cipher suites
+  - `ldap.tls.version`: minimum TLS version (default: TLS1.2)
 
-- LDAP.cache.enabled: enable credential caching (default: true)
-- LDAP.cache.ttl: cache entry TTL in seconds (default: 300)
-- LDAP.cache.size: maximum cache size (default: 10000)
-- LDAP.cache.persist: persist cache across restarts (default: false)
-- LDAP.cache.encryption: encryption method for cached credentials
-
-#### Security Configuration
-
-- LDAP.tls.cert: path to client certificate
-- LDAP.tls.key: path to client key
-- LDAP.tls.ca: path to CA certificate
-- LDAP.tls.verify: verify server certificates (default: true)
-- LDAP.tls.ciphers: allowed cipher suites
-- LDAP.tls.version: minimum TLS version (default: TLS1.2)
+This module will listen for changes of the options above using the `ValkeyModule_SubscribeToServerEvent` API function, and will act accordingly to reconfigure the connections, or other parts of the module, automatically.
 
 ### Metrics and Monitoring
 
@@ -225,45 +196,12 @@ The work done in this Redis Pull Request #11659 means authentication can be hand
 - Authentication attempts (success/failure)
 - Cache performance (hit ratio, size, evictions)
 - LDAP connection status (latency, errors, timeouts)
-- Group resolution performance
-- Resource utilization (memory, CPU)
 
 #### Health Indicators
 - LDAP server connectivity
-- Cache integrity
-- Configuration consistency
 - Error rates and patterns
 - Response time percentiles
 
-### Error Handling and Logging
-
-#### Error Categories
-- Configuration errors (invalid parameters, inconsistent settings)
-- Connection errors (network failures, timeouts, rejected connections)
-- Authentication errors (invalid credentials, expired accounts)
-- Authorization errors (insufficient permissions, group mapping failures)
-- Internal errors (memory allocation, thread management)
-
-#### Logging Levels
-
-- ERROR: critical issues requiring immediate attention
-- WARN: potential issues that don't prevent operation
-- INFO: normal operational events
-- DEBUG: detailed debugging information
-- TRACE: full protocol-level logging for troubleshooting
-
-### Cluster mode
-
-TBD :
-- this should follow the existing authentication rules for Valkey Cluster
-- configuration should be sync-ed across all nodes
-- authentication cache should be consistent across nodes 
-
-### Replication
-
-TDB :
-- this should follow the existing authentication rules for Valkey primaries and replicas
-- authentication cache should be consistent across primary and replica
 
 ### Dependencies 
 
