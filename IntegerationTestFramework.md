@@ -17,7 +17,7 @@ Currently, we can have software developed (e.g. Modules) for Valkey written in d
 For minimal requirements, integration will need to support the following:
 * ValkeyServer class - Start up / Tear down of a valkey-server
 * ValeyClient class - Wrapper for creating a new client & connecting to the server, and supporting common client operations.
-* Specifying custom engine versions
+* Specifying custom engine binary
 * Automatically building the valkey-server binary (pulling from valkey-io project)
 * Specifying Custom Startup arguments
 * Replication Support
@@ -27,7 +27,25 @@ For minimal requirements, integration will need to support the following:
 
 ## Interface
 
-TODO
+1. Example of each test in a test file (class) reusing the same server instance - and having serial / ordered test execution:
+
+[See example file](https://github.com/KarthikSubbarao/valkey-test-framework/blob/unstable/tests/test_reuse_setup_per_class.py)
+
+2. Example of each test in a test file (class) having their own server spawned/torn down - and each test in the class has custom server setup.
+
+[See example file](https://github.com/KarthikSubbarao/valkey-test-framework/blob/unstable/tests/test_specific_setup_per_test.py)
+
+3. Example of each test in a test file (class) having their own server spawned/torn down - and each test in the class has the same server setup logic.
+
+[See example file](https://github.com/KarthikSubbarao/valkey-test-framework/blob/unstable/tests/test_specific_setup_per_class.py)
+
+4. Example of each test in a test file (class) reusing the same replication server instances - and having serial / ordered test execution:
+
+[See example file](https://github.com/KarthikSubbarao/valkey-test-framework/blob/unstable/tests/test_reuse_replication_setup_per_class.py)
+
+5. Example of each test in a test file (class) having their own replication servers spawned/torn down - and each test in the class has custom server & replication setup.
+
+[See example file](https://github.com/KarthikSubbarao/valkey-test-framework/blob/unstable/tests/test_specific_replication_setup_per_class.py)
 
 ## Reference:
 https://github.com/valkey-io/valkey-bloom/tree/unstable/tests/valkeytests
