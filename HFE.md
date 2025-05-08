@@ -2,12 +2,20 @@
 
 
 
-## Overview
+## Abstract
 
-The open-source Valkey community, recognized the growing need for fine-grained control over hash object metadata by introducing Hash Field Expiration (HFE), a feature that allows setting time-to-live (TTL) for individual fields within hash objects. Driven by customer requests for more precise data management and inspired by Redis Ltd.'s recent introduction, We introduce an approach focusing on memory efficiency and performance while maintaining existing user experiences. The solution involves implementing two expiration mechanisms: lazy expiration, which releases fields when accessed, and a background cron job that scans and expires volatile objects. By developing an efficient active expiry mechanism, we aim to reduce cron cycle times and minimize tail latency, ultimately providing developers with granular control over data lifecycle management. The implementation also prioritizes API compatibility with existing Redis clients, enabling seamless migration and adoption for users seeking more sophisticated hash object management capabilities. 
+The open-source Valkey community, recognized the growing need for fine-grained control over hash object metadata by introducing Hash Field Expiration (HFE), a feature that allows setting time-to-live (TTL) for individual fields within hash objects. Driven by customer requests for more precise data management and inspired by Redis Ltd.'s recent introduction, We introduce an approach focusing on memory efficiency and performance while maintaining existing user experiences. The solution involves implementing two expiration mechanisms: lazy expiration, which releases items when accessed, and a background cron job that scans and expires volatile items. By developing an efficient active expiry mechanism, we aim to reduce cron cycle times and minimize tail latency, ultimately providing developers with granular control over data lifecycle management. The implementation also prioritizes API compatibility with existing Redis clients, enabling seamless migration and adoption for users seeking more sophisticated hash object management capabilities. 
 
+## Motivation
 
-## Requirements 
+Introducing field-level expiration for data structures like hashes and sets in Valkey would significantly enhance its flexibility and applicability in modern application architectures. Many use cases—such as session management, per-user rate limits, temporary access rights, feature store toggles, and short-lived membership in groups—require storing multiple items within a single Valkey key, where each item has its own independent expiration time. Currently, Valkey supports expiration only at the key level, which forces developers to either fragment data across multiple keys or implement complex application-side logic to simulate item-level TTLs. This increases operational overhead, complicates data access patterns, and undermines the simplicity Valkey is known for. Native support for field or member expiration within hashes and sets would streamline data modeling, reduce maintenance burdens, and enable more efficient memory usage and access control in real-time systems.
+
+Sub-Items expiration was introduced in several Redis-compatible forks including [Keydb](https://docs.keydb.dev/blog/2019/10/21/blog-post/), [Dragonfly](https://www.dragonflydb.io/docs/command-reference/hashes/hsetex), [Redis](https://redis.io/blog/hash-field-expiration-architecture-and-benchmarks/) and [TairHash module ](https://github.com/tair-opensource/TairHash).
+In order to unblock workloads which are utilizing this logic we would like valkey to offer a similar ability.
+
+## Design considerations 
+
+### Requirements
 
 * Support Redis compatible API to set, get and manipulate Hash field TTL.
 * Support both Lazy and active expiry mechanisms for Hash field expirations.
@@ -19,14 +27,14 @@ The open-source Valkey community, recognized the growing need for fine-grained c
 * **memory efficiency** - At the highest priority we target a minimal metadata overhead used in order to store and manage items TTL. While the optimal overhead to maintain item TTL is 8 bytes (could be less if we allow keeping offsets from the existing epoch diff time), we understand that maintaining active expiry logic will require use of more bytes for metadata. We will make our top priority effort to minimize this overhead.
 * **Latency** - After memory efficiency considerations we will require a solution which provides low latency for hash operations. Hash objects are expected to operate in O(1) for all single access operations (get, set, delete etc...) and we will not break this promise even for items with expiry.
 * **CPU efficiency** - After latency we priorities system CPU efficiency. For example we would like to avoid high CPU utilization caused by need to perform null active expiry checks during cron runs.
-* **Copherency** -  We would like the reported system state to match the logical state as much as possible. For example the reported number of keys per DB is expected to match the number of keys which are NOT logically expired.  
+* **Compatability** - We will avoid breaking clients which are already using HFE API provided by other providers.
+* **Coherency** -  We would like the reported system state to match the logical state as much as possible. For example the reported number of keys per DB is expected to match the number of keys which are NOT logically expired.  
 
-## Interface Requirements
+# Specification
 
-### New command API
+## Commands
 
-The proposed API is very much identical to the Redis provided API (Redis 7.4 + 8.0). This is intentionally proposed in order to avoid breaking client applications already opted to use hash items TTL.   
-
+The proposed API is very much identical to the Redis provided API (Redis 7.4 + 8.0). This is intentionally proposed in order to avoid breaking client applications already opted to use hash items TTL.
 
 #### HSETEX
 
@@ -206,7 +214,7 @@ HPEXPIRETIME key FIELDS numfields field [field ...]
 `HPEXPIRETIME` has the same semantics as `HEXPIRETIME`, but returns the absolute Unix expiration timestamp in milliseconds since Unix epoch instead of seconds.
 
 
-### Keyspace-notification requirements
+## Keyspace-notification requirements
 
 * A new `hexpire` event will be issued whenever a key field is being assigned with an expiry. This will include both cases of assigning TTL for element which had NO prior TTL assigned and when a TTL is changed on an item which already had TTL assigned. 
     The same `hexpire` event will be issued for all different commands which manipulate item TTL (e.g.  `HEXPIRE`, `HEXPIREAT`, `HPEXPIRE` etc...)
@@ -216,6 +224,18 @@ HPEXPIRETIME key FIELDS numfields field [field ...]
     NOTE 1 - for the initial implementation the plan is to emit `hexpired` event for each field expiry, however it might be a valid future performance optimization to batch multiple expirations on the same key into a single event reporting.  
     NOTE 2 - That in case the `HEXPIRE` or any of its variants where used with '0' TTL (which results in the item being deleted) there should also be at least 2 events issued:  ``hexpire`` and `hexpired` (per each of the expired elements)
 
+## Append-only file (TBD)
+
+## RDB (TBD)
+
+## Configuration (TBD)
+
+## Benchmarking (TBD)
+
+## Observability (TBD)
+
+## Design Details
+
 ### Known design limitations
 
 * As item expiration will produce replication content, in some cases we will avoid applying full expiration logic.
@@ -224,7 +244,7 @@ HPEXPIRETIME key FIELDS numfields field [field ...]
 * Since expired items are not immediately expired (when not accessed) it is possible that some commands will return a false state of an Object. For example HLEN will return the number of elements CURRENTLY held in the Hash including items which are expired (and not yet actively expired)
 * During Copy of an element we will NOT copy items which are expired. This means that application validating the copy by checking the objects length might fail on validation.     
 
-## Volatile hash entry memory layout
+### Volatile hash entry memory layout
 
 Currently a field is always an SDS in Valkey. Although it is possible to match a key with external metadata (eg TTL) by mapping the key to the relevant metadata, it will incur extra memory utilization to hold the mapping and will require to use extra CPU cycles in order to locate the TTL per each query. Some dictionaries use objects with embedded keys were the metadata can be set as part of the object. However that would require every dictionary which needs TTL support to use objects with embedded  keys and might significantly complicate existing code paths as well as require extra memory in order hold the object metadata.
 We propose to embed the Expiry time with each HASH entry.
@@ -272,7 +292,7 @@ This has the benefit of avoid reallocating EXISTING entries when an expiry is fi
 User can configure hash type objects to use memory efficient representation using listpacks. Although we could add TTL to the listpack representation this might greatly complicate the usage when some items do not have TTL and others does. Using an external data structure to manage the TTL for listpack elements which were assigned TTL is possible but might reduce the memeory efficiency of this representation. In the sake of simplicity we will force listpack conversion to hashtable representation as soon as the first item TTL is set. This way we will not enforce memory efficiency degradation for users not setting TTL on hash object elements.   
 
 
-## Items expiration context
+### Items expiration context
 
 When expiring an entry, the following actions will take place:
 
@@ -289,7 +309,7 @@ In order to support all these operations there are mandatory inputs which must b
     **First** since all objects have their key name embedded we can retain the key name in order to propagate the command to the replication backlog. **
     Second** all related item tracking can be accessed and updated from the object itself.
 
-## Lazy expiration
+### Lazy expiration
 
 Lazy expiration happen whenever an item which has expired TTL is accessed. In this case the item will be **immediately** removed from the owning object and expired (as described in the expiration context section). This include both read and write commands access context. For items (fields) ‘access’ logic we aim to follow the same logic used for generic keys. 
 When accessing an item, there are 3 potential states it can be stated:
@@ -300,8 +320,7 @@ When accessing an item, there are 3 potential states it can be stated:
 
 The decision regarding the item “state” is taken when the item is accessed during command processing.
 
-#### 
-Lazy expiration logic
+#### Lazy expiration logic
 
 The logic to operate the item state on access: 
 
@@ -622,11 +641,3 @@ The idea behind timer wheels is to keep events closer in time in a higher resolu
 
 The main issue with timer wheels is the cascading operation which might be costly since it will require to iterate over all the items in the cascaded bucket. It is important to note that the higher the level resolution gets, the less frequent this cascading operation needs to take place and it can also increase the probability that these items will be lazily deleted reducing the need to actively iterate and expire them.
 I will not get into the details but there are many ways we can optimize the cascading process. For example we can improve memory access by batch prefetching the items. We can also track the size, mean and variance in each bucket and take cascading decisions based on them.   
-
-
-## Defrag of Items with keys (TBD)
-
-## RDB and AOF support (TBD)
-
-## Observability And Statistics (TBD)
-
