@@ -499,9 +499,9 @@ In order to support all these operations there are mandatory inputs which must b
 Lazy expiration happen whenever an item which has expired TTL is accessed. In this case the item will be **immediately** removed from the owning object and expired (as described in the expiration context section). This include both read and write commands access context. For items (fields) ‘access’ logic we aim to follow the same logic used for generic keys. 
 When accessing an item, there are 3 potential states it can be stated:
 
-1. VALID - meaning the item is to be treated as any existing item and be included in replies as well as operated on during actions and mutations.     
-2. INVALID - meaning the item should be treated as “not exists” and is NOT to be included in any operations and/or replies.
-3. INVALIDATED(deleted) - meaning the item is to-be-removed immediately (i.e expired) and thus does not exist anymore. 
+1. Not Expired - meaning the item is to be treated as any existing item and be included in replies as well as operated on during actions and mutations.     
+2. Expired - meaning the item should be treated as “not exists” and is NOT to be included in any operations and/or replies.
+3. Reclaimed - meaning the item is expired and to-be-removed immediately (i.e reclaimed). 
 
 The decision regarding the item “state” is taken when the item is accessed during command processing.
 
