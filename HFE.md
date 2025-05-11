@@ -1,3 +1,8 @@
+---
+RFC: 22
+Status: Proposed
+---
+
 # Hash Items TTL Support in Valkey RFC
 
 
