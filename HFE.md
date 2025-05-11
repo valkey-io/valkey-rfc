@@ -224,11 +224,196 @@ HPEXPIRETIME key FIELDS numfields field [field ...]
     NOTE 1 - for the initial implementation the plan is to emit `hexpired` event for each field expiry, however it might be a valid future performance optimization to batch multiple expirations on the same key into a single event reporting.  
     NOTE 2 - That in case the `HEXPIRE` or any of its variants where used with '0' TTL (which results in the item being deleted) there should also be at least 2 events issued:  ``hexpire`` and `hexpired` (per each of the expired elements)
 
-## Append-only file (TBD)
+## Append-only file
 
-## RDB (TBD)
+In order to implement the item expirations with AOF rewrite, we will separate the set of the items
+from the set of the expiration.
+Example:
 
-## Configuration (TBD)
+```
+int rewriteHashObject(rio *r, robj *key, robj *o) {
+    hashTypeIterator hi;
+    long long count = 0, volatile_items = hashTypeNumVolatileElements(o), items = hashTypeLength(o) - volatile_items;
+
+    hashTypeInitIterator(o, &hi);
+    while (hashTypeNext(&hi) != C_ERR) {
+        if (count == 0) {
+            int cmd_items = (items > AOF_REWRITE_ITEMS_PER_CMD) ? AOF_REWRITE_ITEMS_PER_CMD : items;
+
+            if (!rioWriteBulkCount(r, '*', 2 + cmd_items * 2) || !rioWriteBulkString(r, "HMSET", 5) ||
+                !rioWriteBulkObject(r, key)) {
+                hashTypeResetIterator(&hi);
+                return 0;
+            }
+        }
+
+        if (volatile_items > 0 && hashTypeEntryHasExpire(hi.next))
+            continue;
+
+        if (!rioWriteHashIteratorCursor(r, &hi, OBJ_HASH_FIELD) || !rioWriteHashIteratorCursor(r, &hi, OBJ_HASH_VALUE)) {
+            hashTypeResetIterator(&hi);
+            return 0;
+        }
+        if (++count == AOF_REWRITE_ITEMS_PER_CMD) count = 0;
+        items--;
+    }
+
+    hashTypeResetIterator(&hi);
+
+    /* Now serialize volatile items if exist */
+    if (hashTypeHasVolatileElements(o)) {
+        hashTypeInitVolatileIterator(o, &hi);
+        while (hashTypeNext(&hi) != C_ERR) {
+            long long expiry = hashTypeEntryGetExpiry(hi.next);
+            sds field = hashTypeEntryGetField(hi.next);
+            sds value = hashTypeEntryGetValue(hi.next);
+            if (rioWriteBulkCount(r, '*', 8) == 0) return 0;
+            if (rioWriteBulkString(r, "HSETEX", 6) == 0) return 0;
+            if (rioWriteBulkObject(r, key) == 0) return 0;
+            if (rioWriteBulkString(r, "PXAT", 4) == 0) return 0;
+            if (rioWriteBulkLongLong(r, expiry) == 0) return 0;
+            if (rioWriteBulkString(r, "FIELDS", 6) == 0) return 0;
+            if (rioWriteBulkLongLong(r, 1) == 0) return 0;
+            if (rioWriteBulkString(r, field, sdslen(field)) == 0) return 0;
+            if (rioWriteBulkString(r, value, sdslen(value)) == 0) return 0;
+        }
+        hashTypeResetIterator(&hi);
+    }
+    return 1;
+}
+```
+
+this has some drawbacks:
+1. We have no way to iterate over non-volatile items. In case of high number of volatile items, we will still iterate over all of the items in the hash.
+2. We will not bulk items with the same expiration time. Although this optimization can be applied, it might be complicated in case we have no way to identify
+if items have the exact same expiration. 
+
+## RDB
+
+### Saving items expirations
+
+1. We will use a dedicated hash object type ie `RDB_TYPE_HASH_2`. 
+the hashObject type will be deducted by the fact that the hashtable includes any items with expiry
+by checking the condition `hashTypeHasVolatileElements` e.g.:
+
+```
+case OBJ_HASH:
+    if (o->encoding == OBJ_ENCODING_LISTPACK)
+        return rdbSaveType(rdb, RDB_TYPE_HASH_LISTPACK);
+    else if (o->encoding == OBJ_ENCODING_HASHTABLE)
+        if (hashTypeHasVolatileElements(o))
+            return rdbSaveType(rdb, RDB_TYPE_HASH_2); <-- new logic
+        else
+            return rdbSaveType(rdb, RDB_TYPE_HASH);
+```
+
+The main reason to maintain forward compatibility in rollback cases. 
+This has some drawbacks. First, future changes to the HASH serialization might have to split into 2 cases. 
+Second, We will dd expiry for ANY item even in case it has NO expiry but only in the cases were 
+the Hash object contains volatile entries.
+
+Example:
+
+```
+int add_expiry = hashTypeHasVolatileElements(o); <--- check here
+hashTypeSetAccessContextWithFlags(o, FIELD_ACCESS_NOEXPIRE | FIELD_ACCESS_IGNORE_TTL);
+
+hashtableIterator iter;
+hashtableInitIterator(&iter, ht, 0);
+void *next;
+while (hashtableNext(&iter, &next)) {
+    sds field = hashTypeEntryGetField(next);
+    sds value = hashTypeEntryGetValue(next);
+
+    if ((n = rdbSaveRawString(rdb, (unsigned char *)field, sdslen(field))) == -1) {
+        hashtableResetIterator(&iter);
+        return -1;
+    }
+    nwritten += n;
+    if ((n = rdbSaveRawString(rdb, (unsigned char *)value, sdslen(value))) == -1) {
+        hashtableResetIterator(&iter);
+        return -1;
+    }
+    nwritten += n;
+    if (add_expiry) {
+        long long expiry = hashTypeEntryGetExpiry(next);
+        if ((n = rdbSaveMillisecondTime(rdb, expiry) == -1)) { <--- apply here
+            hashtableResetIterator(&iter);
+            return -1;
+        }
+        serverLog(LL_NOTICE, "save key %s with expiry: %lld", field, expiry);
+        nwritten += n;
+    }
+}
+```
+
+2. Will also save items which are actually expired by TTL. This is in order to keep replication logic correct, as it is possible
+   that some item already has pending HDEL driven by expiration in the backlog.
+
+
+### Loading items with expirations
+
+1. in case the Object type is `RDB_TYPE_HASH_2` we will immidiately convert it to hashtable representation:
+
+```
+o = createHashObject();
+
+        /* Too many entries or hash object contains elements with expiry? Use a hash table right from the start. */
+        if (len > server.hash_max_listpack_entries || rdbtype == RDB_TYPE_HASH_2)
+            hashTypeConvert(o, OBJ_ENCODING_HASHTABLE);
+```
+
+2. After identify the type we will also parse the item TTL:
+
+```
+/* Load remaining fields and values into the hash table */
+while (o->encoding == OBJ_ENCODING_HASHTABLE && len > 0) {
+    len--;
+    /* Load encoded strings */
+    if ((field = rdbGenericLoadStringObject(rdb, RDB_LOAD_SDS, NULL)) == NULL) {
+        decrRefCount(o);
+        return NULL;
+    }
+    if ((value = rdbGenericLoadStringObject(rdb, RDB_LOAD_SDS, NULL)) == NULL) {
+        sdsfree(field);
+        decrRefCount(o);
+        return NULL;
+    }
+
+    /* Also load the entry expiry */
+    long long itemexpiry = -1;
+    if (rdbtype == RDB_TYPE_HASH_2) {
+        itemexpiry = rdbLoadMillisecondTime(rdb, RDB_VERSION);
+        serverLog(LL_NOTICE, "load key %s with expiry: %lld", field, itemexpiry);
+        if (itemexpiry == LLONG_MAX && rioGetReadError(rdb)) return NULL;
+    }
+
+    /* Add pair to hash table */
+    hashTypeEntry *entry = hashTypeCreateEntry(field, value, itemexpiry, NULL, 0);
+    sdsfree(field);
+    if (!hashtableAdd((hashtable *)o->ptr, entry)) {
+        rdbReportCorruptRDB("Duplicate hash fields detected");
+        freeHashTypeEntry(entry);
+        decrRefCount(o);
+        return NULL;
+    }
+
+    if (rdbtype == RDB_TYPE_HASH_2 && itemexpiry > 0) {
+        hashTypeTrackEntry(o, entry);
+    }
+}
+```
+
+### Alternatives considered
+
+We could apply the change to include a metadta per every hash item entry. This will prevent forward RDB compatability, but might help reduce the extra memory used for RDB
+in caseses were most items are not volatile and the metadata size is small (smaller than 8 bytes). 
+
+
+## Configuration 
+
+We suggest to avoid placing new configuration to fine tune this feature. Internal configurations can be discussed in order to be able to
+prevent active expiration of volatile items.
 
 ## Benchmarking (TBD)
 
