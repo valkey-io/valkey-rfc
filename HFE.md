@@ -415,9 +415,23 @@ in caseses were most items are not volatile and the metadata size is small (smal
 We suggest to avoid placing new configuration to fine tune this feature. Internal configurations can be discussed in order to be able to
 prevent active expiration of volatile items.
 
-## Benchmarking (TBD)
+## Observability
 
-## Observability (TBD)
+AT the first drop we will only introduce some basic statistics:
+1. volatile_items will be added to the Keyspace section per-db line. eg:
+
+```
+db0:keys=1,expires=0,avg_ttl=0,volatile_items=16
+```
+
+NOTE - we can also consider adding keys_with_volatile_items statistic to track how many objects have 
+volatile items. eg:
+
+```
+db0:keys=1,expires=0,avg_ttl=0,volatile_items=16,keys_with_volatile_items=1
+```
+
+2. expire_items_cycle_cpu_milliseconds statistic will be added to the `stats` and will indicate the number of CPU cycles consumed by the items active expiry cron.
 
 ## Design Details
 
