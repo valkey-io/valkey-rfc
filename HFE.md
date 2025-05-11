@@ -218,7 +218,7 @@ HPEXPIRETIME key FIELDS numfields field [field ...]
 
 * A new `hexpire` event will be issued whenever a key field is being assigned with an expiry. This will include both cases of assigning TTL for element which had NO prior TTL assigned and when a TTL is changed on an item which already had TTL assigned. 
     The same `hexpire` event will be issued for all different commands which manipulate item TTL (e.g.  `HEXPIRE`, `HEXPIREAT`, `HPEXPIRE` etc...)
-    NOTE that for some cases (e.g HSETEX, there will be 2 events issued: `HSET` and `EXPIRE`)
+    NOTE that for some cases (e.g HSETEX, there will be 2 events issued: `HSET` and `HEXPIRE`)
 * A new `hpersist` event will be issued whenever an item is persisted. this can be when `HPERSIST` was issued.
 * A new `hexpired` event will be issued whenever an item is actually being expired (either actively or lazily) 
     NOTE 1 - for the initial implementation the plan is to emit `hexpired` event for each field expiry, however it might be a valid future performance optimization to batch multiple expirations on the same key into a single event reporting.  
