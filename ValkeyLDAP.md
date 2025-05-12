@@ -28,30 +28,32 @@ The Valkey Module API already supports the offloading of user authentication to 
 
 This module will support the two traditional approaches to authenticate users against an LDAP server:
 * The *bind* approach.
-* The *search/compare* approach.
+* The *search+bind* approach.
 
-The bind approach is preferred since the password stored in the LDAP server is never sent to clients. This approach makes use of the LDAP BIND operation that receives the user DN and a password, and the LDAP server performs the password validation against its own records. The response of the BIND operation is either that the user is successfully authenticated or not.
+The `bind` mode can be used when the username mostly matches the DN of user entries in the LDAP directory, while the `search+bind` mode allows for a much more flexible LDAP directory structure.
 
-The search approach can be used when the BIND operation is disabled for regular users, and only an admin account can be used to bind to the LDAP server. In this approach, an admin connection is bound to the LDAP server, and then performs a SEARCH operation to check if the user exists, and if that is the case, retrieves the password of the user to compare it with the password given by the user.
+### Bind Mode Authentication
+In the `bind` mode, the module will bind to the distinguished name constructed by prepending a configurable prefix and appending a configurable suffix to the username. Typically, the prefix parameter is used to specify `cn=`, or `DOMAIN\` in an Active Directory environment. The suffix is used to specify the remaining part of the DN in a non-Active Directory environment.
 
-It's important that when using the search approach, the connection to the LDAP server must have TLS enabled to avoid the user password to be transmitted in plain text through the network.
+### Search+Bind Authentication
+In the `search+bind mode`, the module first binds to the LDAP directory with a username and password of an account that has permissions to perform search operation in the LDAP directory. If no username and password is configured for the binding phase, an anonymous bind will be attempted to the directory.
 
-The module implementation will use the `ValkeyModule_RegisterAuthCallback` API function to register the entrypoint of the LDAP authentication workflow.
+After the binding phase, a search operation is performed over the subtree at a configurable base DN string, and will try to do an exact match of the username specified in the `AUTH` command against the value of a configurable entry attribute.
+
+Once the user has been found in this search, the module re-binds to the LDAP directory as this user, using the password specified in the `AUTH` command, to verify that the login is correct.
+
+This mode allows for significantly more flexibility in where the user objects are located in the directory, but will cause two additional requests to the LDAP server to be made.
+
+### Minimum Viable Product
 
 In a first stage of the module implementation, the module will support a minimal set of features and requirements to successfully handle LDAP authentication queries in a production evironment, namely:
 
-* Perfomance
-  * Memory caching of authentication authorizations
-  * Connection pooling to reduce latency
 * Scalability
   * Efficient handling of concurrent authentication requests
   * Asynchronous communication with LDAP servers
 * Security
-  * Secure credential handling and storage
   * TLS 1.2+ support
-  * Audit trail for authentication events
 * Maintainability
-  * Comprehensive logging and monitoring
   * Comprehensive error handling
 * Compatibility
   * Compatibility with existing Valkey clients
@@ -65,9 +67,22 @@ In a first stage of the module implementation, the module will support a minimal
   * LDAP Bind PW
   * LDAP search Base DN
   * LDAP User filter pattern
+  * TLS cert configs
+
+Future improvements will include:
+
+* Perfomance
+  * Memory caching of authentication authorizations
+  * Connection pooling to reduce latency
+* Security
+  * Secure credential handling and storage
+  * Audit trail for authentication events
+* Maintainability
+  * Comprehensive logging and monitoring
+* Configuration
   * Server connection timeout
   * Search operation timeout
-  * TLS cert configs
+
 
 ### LDAP and Valkey User Mapping
 
@@ -163,30 +178,37 @@ The configuration options for this module will be registered using the `ValkeyMo
 The list of configuration options is the following:
 
 - General options
-  - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search`.
-  - `ldap.servers`: list of LDAP server addresses (comma-separated) where each server address has following format `ldap[s]://<hostname>[:<port>][/<dn>]`
+  - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search+bind`.
+  - `ldap.servers`: list of LDAP server addresses (space-separated) where each server address has following format `ldap[s]://<hostname>[:<port>]`
     - The default port for `ldap` protocol is 389
     - The default port for `ldaps` protocol is 636
-  - `ldap.timeout.connect`: connection timeout in ms (default: 1000)
-  - `ldap.timeout.search`: search operation timeout in ms (default: 2000)
-  - `ldap.binddn`: service account DN for initial bind
-  - `ldap.bindpw`: service account password (stored securely)
-  - `ldap.search.basedn`: base DN for user searches
-  - `ldap.search.user_filter`: LDAP filter for user searches
-  - `ldap.search.group_filter`: LDAP filter for group membership queries
-
-- Cache options
-  - `ldap.cache.enabled`: enable credential caching (default: true)
-  - `ldap.cache.ttl`: cache entry TTL in seconds (default: 300)
-  - `ldap.cache.size`: maximum cache size (default: 10000)
+  - `ldap.timeout_connect`: connection timeout in ms (default: 1000)
+  - `ldap.timeout_search`: search operation timeout in ms (default: 2000)
 
 - TLS options
-  - `ldap.tls.cert`: path to client certificate
-  - `ldap.tls.key`: path to client key
-  - `ldap.tls.ca`: path to CA certificate
-  - `ldap.tls.verify`: verify server certificates (default: true)
-  - `ldap.tls.ciphers`: allowed cipher suites
-  - `ldap.tls.version`: minimum TLS version (default: TLS1.2)
+  - `ldap.use_starttls`: whether upgrade to a TLS encrypted connection upon connection to a non-ssl LDAP instance
+  - `ldap.tls_cert_path`: path to client certificate
+  - `ldap.tls_key_path`: path to client key
+  - `ldap.tls_ca_cert_path`: path to CA certificate
+
+- Bind mode options
+  - `ldap.bind_dn_prefix`: service account DN for initial bind
+  - `ldap.bind_dn_suffix`: service account DN for initial bind
+
+- Search+Bind mode options
+  - `ldap.search_bind_dn`: service account DN
+  - `ldap.search_bind_passwd`: service account password
+  - `ldap.search_base`: base DN for user searches
+  - `ldap.search_filter`: filter for user searches
+  - `ldap.search_attribute`: the entry attribute used in search for matching the username
+  - `ldap.search_scope`: the LDAP search scope
+  - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry
+
+- Cache options
+  - `ldap.cache_enabled`: enable credential caching (default: true)
+  - `ldap.cache_ttl`: cache entry TTL in seconds (default: 300)
+  - `ldap.cache_size`: maximum cache size (default: 10000)
+
 
 This module will listen for changes of the options above using the `ValkeyModule_SubscribeToServerEvent` API function, and will act accordingly to reconfigure the connections, or other parts of the module, automatically.
 
