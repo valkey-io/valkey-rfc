@@ -1,5 +1,5 @@
 ---
-RFC: #20
+RFC: 20
 Status: Proposed
 ---
 
