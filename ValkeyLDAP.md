@@ -142,7 +142,8 @@ The configuration options for this module will be registered using the `ValkeyMo
 The list of configuration options is the following:
 
 - General options
-  - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search+bind`.
+  - `ldap.auth_enabled`: whether the module should try to authenticate the user using LDAP (default: `yes`)
+  - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search+bind` (default: `bind`)
   - `ldap.servers`: list of LDAP server addresses (space-separated) where each server address has following format `ldap[s]://<hostname>[:<port>]`
     - The default port for `ldap` protocol is 389
     - The default port for `ldaps` protocol is 636
@@ -150,21 +151,21 @@ The list of configuration options is the following:
   - `ldap.timeout_ldap_operation`: LDAP operation (i.e., bind, search, etc...) operation timeout in seconds (default: 10)
 
 - TLS options
-  - `ldap.use_starttls`: whether upgrade to a TLS encrypted connection upon connection to a non-ssl LDAP instance
+  - `ldap.use_starttls`: whether upgrade to a TLS encrypted connection upon connection to a non-ssl LDAP instance (default: `no`)
   - `ldap.tls_cert_path`: path to client certificate
   - `ldap.tls_key_path`: path to client key
   - `ldap.tls_ca_cert_path`: path to CA certificate
 
 - Bind mode options
-  - `ldap.bind_dn_prefix`: service account DN for initial bind
-  - `ldap.bind_dn_suffix`: service account DN for initial bind
+  - `ldap.bind_dn_prefix`: service account DN for initial bind (default: `"CN="`)
+  - `ldap.bind_dn_suffix`: service account DN for initial bind.
 
 - Search+Bind mode options
   - `ldap.search_bind_dn`: service account DN
   - `ldap.search_bind_passwd`: service account password
   - `ldap.search_base`: base DN for user searches
-  - `ldap.search_filter`: filter for user searches
-  - `ldap.search_attribute`: the entry attribute used in search for matching the username
-  - `ldap.search_scope`: the LDAP search scope
-  - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry
+  - `ldap.search_filter`: filter for user searches (default: `"objectClass=*"`)
+  - `ldap.search_attribute`: the entry attribute used in search for matching the username (default: `"uid"`)
+  - `ldap.search_scope`: the LDAP search scope. Possible values `base`, `one`, `sub` (default: `sub`)
+  - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry (default: `"entryDN"`)
 
