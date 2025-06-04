@@ -7,7 +7,7 @@ Status: Proposed
 
 ## Abstract
 
-The proposed Valkey LDAP module, named ValkeyLDAP, supports authentication to Valkey through external to Valkey managed authentication mechanisms based on the LDAP protocol. The module provides seamless integration between Valkey's authentication system and external enterprise authentication infrastructure, allowing organizations to leverage existing identity management systems. The design emphasizes security, scalability, and minimal performance impact while providing robust user authentication and role-based access control.
+The proposed Valkey LDAP module, named ValkeyLDAP, supports authentication to Valkey through external to Valkey managed authentication mechanisms based on the LDAP protocol. The module provides seamless integration between Valkey's authentication system and external enterprise authentication infrastructure, allowing organizations to leverage existing identity management systems. The design emphasizes security, scalability, and minimal performance impact while providing robust user authentication.
 
 ## Motivation
 
@@ -23,17 +23,16 @@ Organizations running Valkey in enterprise environments frequently need to integ
 
 The Valkey Module API already supports the offloading of user authentication to an external module, we will make use of this API to implement the LDAP authentication module.
 
-
 ## Design considerations
 
 This module will support the two traditional approaches to authenticate users against an LDAP server:
 * The *bind* approach.
 * The *search+bind* approach.
 
-The `bind` mode can be used when the username mostly matches the DN of user entries in the LDAP directory, while the `search+bind` mode allows for a much more flexible LDAP directory structure.
+The `bind` mode can be used when the username is part of the distinguish name (DN) of user entries in the LDAP directory, while the `search+bind` mode allows for a much more flexible LDAP directory structure.
 
 ### Bind Mode Authentication
-In the `bind` mode, the module will bind to the distinguished name constructed by prepending a configurable prefix and appending a configurable suffix to the username. Typically, the prefix parameter is used to specify `cn=`, or `DOMAIN\` in an Active Directory environment. The suffix is used to specify the remaining part of the DN in a non-Active Directory environment.
+In the `bind` mode, the module will bind to the DN constructed by prepending a configurable prefix and appending a configurable suffix to the username. Typically, the prefix parameter is used to specify `CN=`, or `DOMAIN\` in an Active Directory environment. The suffix is used to specify the remaining part of the DN in a non-Active Directory environment.
 
 ### Search+Bind Authentication
 In the `search+bind mode`, the module first binds to the LDAP directory with a username and password of an account that has permissions to perform search operation in the LDAP directory. If no username and password is configured for the binding phase, an anonymous bind will be attempted to the directory.
@@ -51,14 +50,17 @@ In a first stage of the module implementation, the module will support a minimal
 * Scalability
   * Efficient handling of concurrent authentication requests
   * Asynchronous communication with LDAP servers
+  * Connection pooling to reduce latency
 * Security
   * TLS 1.2+ support
+  * Secure credential handling and storage
 * Maintainability
   * Comprehensive error handling
+  * Comprehensive logging and monitoring
 * Compatibility
   * Compatibility with existing Valkey clients
 * High Availabilty
-  * Multiple identity provider server support
+  * Multiple LDAPS servers support
   * Server connection failover
 * Configuration
   * LDAP server connection (address, port, ssl)
@@ -68,21 +70,6 @@ In a first stage of the module implementation, the module will support a minimal
   * LDAP search Base DN
   * LDAP User filter pattern
   * TLS cert configs
-
-Future improvements will include:
-
-* Perfomance
-  * Memory caching of authentication authorizations
-  * Connection pooling to reduce latency
-* Security
-  * Secure credential handling and storage
-  * Audit trail for authentication events
-* Maintainability
-  * Comprehensive logging and monitoring
-* Configuration
-  * Server connection timeout
-  * Search operation timeout
-
 
 ### LDAP and Valkey User Mapping
 
@@ -106,40 +93,13 @@ Another possibility for the future is to create a module command that helps syst
 
 1. Client sends AUTH/HELLO command
 2. Module auth callback is called with username/password
-3. Check credential cache
-4. If not cached:
-    - connect to LDAP server
-    - perform bind operation
-    - search for user group membership
-    - cache successful result
-    - set TTL
-5. Pass AUTH/NOAUTH to Valkey core
-6. Return auth response
+3. Start an asynchronous authentication task and let Valkey core continue serving other clients
+4. Get an LDAP connection from a connection pool
+5. Perform the bind or search+bind operation
+6. Notify Valkey core with the authentication result
+7. Valkey processes authentication result and responds to the AUTH/HELLO command
 
-The operations done in step 4 should be executed asynchronously in order to track the time that is taking for authenticating the user.
-
-If the authentication process is taking longer than a specific threshold, the module should make use of the Blocking Client Module APIs, in particular using the `ValkeyModule_BlockClientOnAuth` function, to continue the authentication process in the background and allow the Valkey main event loop to continue processing other client commands.
-
-The revised authentication flow steps in a long running authentication process would be:
-
-1. Client sends AUTH/HELLO command
-2. Module auth callback is called with username/password
-3. Check credential cache
-4. If not cached, run asynhcronously in a side thread:
-    - connect to LDAP server
-    - perform bind operation
-    - search for user group membership
-    - cache successful result
-    - set TTL
-    - If client is blocked, call `ValkeyModule_UnblockClient`
-5. If step 4 taking a long time:
-    - Call `ValkeyModule_BlockClientOnAuth` and signal authentication thread
-5. Pass AUTH/NOAUTH to Valkey core
-6. Return auth response
-
-During the authentication flow, if a network error occurs, the Valkey authentication request will fail, and more detailed error description will be logged in the server log.
-
-A user can also issue the `LDAP.STATUS` command to check if the module was able to establish a connection with the configured servers.
+Steps 4 to 6 are executed by an asynchronous task, which allows the module to process several authentication requests in parallel.
 
 ### On module load
 
@@ -154,21 +114,25 @@ Upon the module load operation we'll run the following procedures:
 
 The configuration options of this module will be set using the standard `CONFIG SET` command.
 
-The only commands exported by this module are:
+The only command exported by this module is:
 
-* `LDAP.RELOAD`
-  - Reloads configuration from config file
-  - Reestablishes connections with LDAP servers
-  - Returns simple string reply: OK on success
+* `LDAP.STATUS`: returns health and statistics information for each LDAP server instance.
 
-* `LDAP.STATUS`
-  - Returns health and statistics information
-  - Format: nested hash with connection states, cache stats, auth counts
+The format of the response of this command is a map where each key corresponds to the hostname of an LDAP server, and the value is a map with the keys `status`, `ping_time`, `error`.
 
-* `LDAP.FLUSHCACHE`
-  - Clears the credential cache
-  - Options to flush all or specific users
-  - Returns integer reply: number of entries flushed
+```json
+{
+  "server1_hostname": {
+    "status": "healthy",
+    "ping_time(ms)": "1.23"
+  },
+
+  "server2_hostname": {
+    "status": "unhealthy",
+    "error": "an error message"
+  }
+}
+```
 
 
 ### Configuration
@@ -182,8 +146,8 @@ The list of configuration options is the following:
   - `ldap.servers`: list of LDAP server addresses (space-separated) where each server address has following format `ldap[s]://<hostname>[:<port>]`
     - The default port for `ldap` protocol is 389
     - The default port for `ldaps` protocol is 636
-  - `ldap.timeout_connect`: connection timeout in ms (default: 1000)
-  - `ldap.timeout_search`: search operation timeout in ms (default: 2000)
+  - `ldap.timeout_connection`: connection timeout in seconds (default: 10)
+  - `ldap.timeout_ldap_operation`: LDAP operation (i.e., bind, search, etc...) operation timeout in seconds (default: 10)
 
 - TLS options
   - `ldap.use_starttls`: whether upgrade to a TLS encrypted connection upon connection to a non-ssl LDAP instance
@@ -203,29 +167,4 @@ The list of configuration options is the following:
   - `ldap.search_attribute`: the entry attribute used in search for matching the username
   - `ldap.search_scope`: the LDAP search scope
   - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry
-
-- Cache options
-  - `ldap.cache_enabled`: enable credential caching (default: true)
-  - `ldap.cache_ttl`: cache entry TTL in seconds (default: 300)
-  - `ldap.cache_size`: maximum cache size (default: 10000)
-
-
-This module will listen for changes of the options above using the `ValkeyModule_SubscribeToServerEvent` API function, and will act accordingly to reconfigure the connections, or other parts of the module, automatically.
-
-### Metrics and Monitoring
-
-#### Exported Metrics
-- Authentication attempts (success/failure)
-- Cache performance (hit ratio, size, evictions)
-- LDAP connection status (latency, errors, timeouts)
-
-#### Health Indicators
-- LDAP server connectivity
-- Error rates and patterns
-- Response time percentiles
-
-
-### Dependencies 
-
-- [openLDAP library](https://git.openldap.org/openldap/openldap)
 
