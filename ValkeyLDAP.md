@@ -169,3 +169,28 @@ The list of configuration options is the following:
   - `ldap.search_scope`: the LDAP search scope. Possible values `base`, `one`, `sub` (default: `sub`)
   - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry (default: `"entryDN"`)
 
+
+### Scalability of authentication requests
+
+Scalability will be achieve using two stratgegies:
+
+* LDAP connection pooling and muiltiplexing
+* Parallel authentication processes with asynchronous I/O
+
+#### LDAP connection pool
+
+The module should be able to limit the number of LDAP connections it uses and should use a connection pool to avoid the overhead of opening a new connection for each authentication request.
+
+Since the module supports configuring multiple LDAP servers for redundancy, it should manage a connection pool for each LDAP server.
+
+The number of connections present in the pool should be configurable, and be modifiable at runtime.
+
+The LDAP protocol allows to use a single connection to perfom multiple `bind` operations, this means that we can safely re-use the connections from the pool to process multiple authentication requests from different users.
+
+#### Parallelism of authentication processes
+
+As described in section [Authentication flow](#authentication-flow), the LDAP authentication process should be done in the background to avoid blocking other commands, and other authentication requests, since the authentication operation duration might depend on network latencies.
+
+The authentication requests should be processed by a thread from a thread pool, and make use of asynchronous I/O when running LDAP operations to allow even more parallelism without requiring too many threads.
+
+The thread pool allows to limit the memory and CPU resources used by the module to avoid impacting the Valkey core performance.
