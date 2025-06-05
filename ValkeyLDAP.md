@@ -110,30 +110,6 @@ Upon the module load operation we'll run the following procedures:
 3. Establish initial LDAP server connections
 4. Register command hooks with valkey core
 
-### Commands
-
-The configuration options of this module will be set using the standard `CONFIG SET` command.
-
-The only command exported by this module is:
-
-* `LDAP.STATUS`: returns health and statistics information for each LDAP server instance.
-
-The format of the response of this command is a map where each key corresponds to the hostname of an LDAP server, and the value is a map with the keys `status`, `ping_time`, `error`.
-
-```json
-{
-  "server1_hostname": {
-    "status": "healthy",
-    "ping_time(ms)": "1.23"
-  },
-
-  "server2_hostname": {
-    "status": "unhealthy",
-    "error": "an error message"
-  }
-}
-```
-
 
 ### Configuration
 
@@ -169,6 +145,24 @@ The list of configuration options is the following:
   - `ldap.search_scope`: the LDAP search scope. Possible values `base`, `one`, `sub` (default: `sub`)
   - `ldap.search_dn_attribute`: the attribute that contains the DN of the user entry (default: `"entryDN"`)
 
+### INFO Command
+
+This module extends the `INFO` command output with a new section to show the status information of each LDAP server configured in `ldap.servers` configuration option.
+
+The new section is named `ldap_status` and contains a dictionary field per each server.
+
+Each dictionary field may contain the following fields:
+* `url`: the URL of the server as specified in `ldap.servers` configuration options.
+* `status`: the possible values for this field are `healthy`, or `unhealthy`; the `healthy` value denotes that the server is connectable and responds to LDAP operations, and the `unhealthy` value denotes that the server cannot process LDAP operations.
+* `ping_time`: shows the RTT for an simple LDAP operation in milliseconds; this field is only visible for `healthy` servers.
+* `error`: a string value with the cause for setting the server as `unhealthy`ç this field is only visible for `unhealthy` servers.
+
+Example of the output returned by `INFO`:
+```
+# ldap_status
+ldap_server_0:url=ldap://<hostname>,status=unhealthy,error=<some error message>
+ldap_server_1:url=ldaps://<hostname>,status=healthy,ping_time(ms)=1.645
+```
 
 ### Scalability of authentication requests
 
