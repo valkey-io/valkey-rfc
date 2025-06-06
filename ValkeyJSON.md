@@ -258,12 +258,12 @@ JSON.ARRINSERT <key> <path> <index> <json> [json ...]
     * Array of integers, representing the new length of the array at each path.
     * If a value is an empty array, its corresponding return value is null.
     * If a value is not an array, its corresponding return value is null.
-    * OUTOFBOUNDARIES error if the index argument is out of bounds.
+    * OUTOFBOUNDS error if the index argument is out of bounds.
 
 * If the path is restricted syntax:
     * Integer, the new length of the array.
     * WRONGTYPE error if the value at the path is not an array.
-    * OUTOFBOUNDARIES error if the index argument is out of bounds.
+    * OUTOFBOUNDS error if the index argument is out of bounds.
 
 #### JSON.ARRLEN
 
@@ -347,13 +347,13 @@ JSON.ARRTRIM <key> <path> <start> <end>
     * Array of integers, representing the new length of the array at each path.
     * If a value is an empty array, its corresponding return value is null.
     * If a value is not an array, its corresponding return value is null.
-    * OUTOFBOUNDARIES error if an index argument is out of bounds.
+    * OUTOFBOUNDS error if an index argument is out of bounds.
 
 * If the path is restricted syntax:
     * Integer, the new length of the array.
     * Null if the array is empty.
     * WRONGTYPE error if the value at the path is not an array.
-    * OUTOFBOUNDARIES error if an index argument is out of bounds.
+    * OUTOFBOUNDS error if an index argument is out of bounds.
 
 #### JSON.CLEAR
 
@@ -684,7 +684,7 @@ Set JSON values at the path.
 * If the path calls for an array index:
     * If the parent element does not exist, the command will return a NONEXISTENT error.
     * If the parent element exists but is not an array, the command will return ERROR.
-    * If the parent element exists but the index is out of bounds, the command will return OUTOFBOUNDARIES error.
+    * If the parent element exists but the index is out of bounds, the command will return OUTOFBOUNDS error.
     * If the parent element exists and the index is valid, the element will be replaced by the new JSON value.
 * If the path calls for an object or array, the value (object or array) will be replaced by the new JSON value.
 
