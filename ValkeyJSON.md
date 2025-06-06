@@ -862,7 +862,7 @@ Info metrics are visible through the “info json” or “info modules” comma
 | Config Name            | Default Value | Unit | 	Description                                     |
 |:-----------------------|:--------------|:-----|:------------------------------------------------------|
 | json.max-document-size | 64            | MB   | Maximum memory allowed for a single JSON document.    |
-| josn.max-path-limit    | 128           |      | Maximum nesting levels within a single JSON document. |
+| json.max-path-limit    | 128           |      | Maximum nesting levels within a single JSON document. |
 
 ### Module API
 
