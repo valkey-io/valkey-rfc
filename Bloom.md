@@ -479,7 +479,7 @@ When the command is used, only either EXPANSION or NONSCALING can be used. If bo
 the number of items that can be inserted. For scaling, this is the number of items that can be added after which scaling
 occurs.
 
-"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+"EXPANSION" can be used to create a scaling enabled bloom object with the specified expansion rate.
 
 "NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
 full capacity.
@@ -502,7 +502,7 @@ occurs.
 "NOCREATE" can be used to specify that the command should not result in creation of a new bloom object if it does not exist.
 If NOCREATE is used along with CAPACITY or ERROR, an error is returned.
 
-"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+"EXPANSION" can be used to create a scaling enabled bloom object with the specified expansion rate.
 
 "NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
 full capacity. Only either EXPANSION or NONSCALING can be used. If both are used, an error is returned.
