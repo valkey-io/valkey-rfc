@@ -19,7 +19,7 @@ To utilize Bloom filters in their client applications, users today use client li
 including jedis, redis-py, node-redis, nredisstack, rueidis, rustis, etc. This allows customers to perform bloom filter
 based operations, e.g. add and set.
 
-Redis Ltd.‘s ReBloom is published under a proprietery license and hence cannot be distributed freely with ValKey.
+Redis Ltd.‘s ReBloom is published under a proprietary license and hence cannot be distributed freely with ValKey.
 
 There is growing [demand](https://github.com/orgs/valkey-io/discussions?discussions_q=+bloom+) for an
 (1) Open Source bloom filter feature in Valkey which is (2) compatible with the ReBloom API syntax and with
