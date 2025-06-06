@@ -12,14 +12,14 @@ The proposed feature is ValkeyBloom which is a Rust based Module that brings a n
 ## Motivation
 
 Bloom filters are a space efficient probabilistic data structure that can be used to "check" whether an element exists in
-a set (with a defined false positive), and to "add" elements to a set. While checking whether an item exists, false positives
+a set (with a defined false-positive), and to "add" elements to a set. While checking whether an item exists, false-positives
 are possible, but false negatives are not possible. https://en.wikipedia.org/wiki/Bloom_filter
 
 To utilize Bloom filters in their client applications, users today use client libraries that are compatible with the ReBloom
 including jedis, redis-py, node-redis, nredisstack, rueidis, rustis, etc. This allows customers to perform bloom filter
 based operations, e.g. add and set.
 
-Redis Ltd.‘s ReBloom is published under a proprietery license and hence cannot be distributed freely with ValKey.
+Redis Ltd.‘s ReBloom is published under a proprietary license and hence cannot be distributed freely with ValKey.
 
 There is growing [demand](https://github.com/orgs/valkey-io/discussions?discussions_q=+bloom+) for an
 (1) Open Source bloom filter feature in Valkey which is (2) compatible with the ReBloom API syntax and with
@@ -30,7 +30,7 @@ existing ReBloom based client libraries. ValkeyBloom will help address both thes
 
 The ValkeyBloom module brings in a bloom module data type into Valkey and provides commands to create / reserve
 bloom filters, operate on them (add items, check if items exist), inspect bloom filters, etc.
-It allows customization of properties of bloom filter (capacity, false positive rate, expansion rate, specification of
+It allows customization of properties of bloom filter (capacity, false-positive rate, expansion rate, specification of
 scaling vs non-scaling filters etc) through commands and configurations. It also allows users to create scalable bloom
 filters and back up & restore bloom filters (through RDB load and save).
 
@@ -40,11 +40,11 @@ around which it implements a scalable bloom filter.
 
 When a bloom filter is created, a bit array is created with a length proportional to the capacity (number of items the user
 wants to add to the filter) and hash functions are also created. The number of hash functions are controlled by the
-false positive rate that the user configures.
+false-positive rate that the user configures.
 
 When a user adds an item (e.g. BF.ADD) to the filter, the item is passed through the hash functions and the corresponding
 bits are set to 1. When a user checks whether an item exists on a filter (e.g. BF.EXISTS), the item is passed through the
-filters and if all the resolved bits have values as 1, we can say that the item exists with a false positive rate of
+filters and if all the resolved bits have values as 1, we can say that the item exists with a false-positive rate of
 X (specified by the user when creating the filter). If any of the bits are 0, the item does not exist and the BF.EXISTS
 operation will return 0.
 
@@ -102,7 +102,7 @@ ValkeyBloom implements persistence related Module data type callbacks for the Bl
 
 ### RDB Save and Load
 
-During RDB Save of a bloom object, the Module will save the number of filters, expansion rate, false positive rate.
+During RDB Save of a bloom object, the Module will save the number of filters, expansion rate, false-positive rate.
 And for every underlying bloom filter in this object, number of hashing functions, number of bits of the bit array,
 bytes of the bit array itself.
 
@@ -186,19 +186,19 @@ Note: When BF.ADD/BF.MADD/BF.INSERT commands (containing one or more items) are 
 is at full capacity on primary node, we check whether the item exists or not. This check is based on the configured false
 positive rate. If the item is not found, the command results in scaling out by adding a new filter to the bloom object,
 adding the item to it, and then replicating the command verbatim to replica nodes. However, the replicated command can
-result in a false positive when it checks whether the item exists. In this case, the scale out does not occur on the bloom
+result in a false-positive when it checks whether the item exists. In this case, the scale out does not occur on the bloom
 object on the replica. This can result in a slight different memory usage between primary and replica nodes which is more
 apparent when bloom objects have large filters.
 
 ### Non Scalable filters
 
 When non-scaling filters reach their capacity, if a user tries to add items to the bloom object, an error is returned. This
-default behavior is based on ReBloom. This helps keep the false positve error rate of the Bloom object to be what the user
+default behavior is based on ReBloom. This helps keep the false-positive error rate of the Bloom object to be what the user
 requested when creating the bloom object.
 
 A configuration can be used to provide an alternative behavior of allowing bloom objects to be saturated by allowing add
 operations (BF.ADD/BF.MADD/BF.INSERT) to continue without being rejected even when a filter is at full capacity. This will
-increase the false positve error rate, but a user can opt into this behavior to allow add operations to "succeed".
+increase the false-positive error rate, but a user can opt into this behavior to allow add operations to "succeed".
 
 ### Scalable filters
 
@@ -329,7 +329,7 @@ This callback decides the free effort for the bloom object. If it is greater tha
 **write operations (BF.ADD/MADD/INSERT/RESERVE):**
 
 If the write operation requires creation of a new bloom filter on a particular bloom object, we will compute the memory
-usage of the bloom filter that is about to be created (based on capacity and false positive rate). If the memory usage
+usage of the bloom filter that is about to be created (based on capacity and false-positive rate). If the memory usage
 is greater than 64 MB (`bloom_filter_max_memory_usage` constant), the write operation will be rejected.
 
 Scalable Bloom filters will grow in used memory after creation of the bloom object - but only as a result of a BF.ADD, BF.MADD,
@@ -375,13 +375,13 @@ The following are supported Bloom Filter commands with API syntax compatible wit
 This API can be used to add an item to an existing bloom object or to create + add the item.
 Response is in the Integer reply format.
 
-Item does not exist (based on false positve rate) and was successfully to the bloom filter.
+Item does not exist (based on false-positive rate) and was successfully to the bloom filter.
 If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
 ```
 (integer) 1
 ```
 
-Item already exists (based on false positve rate).
+Item already exists (based on false-positive rate).
 ```
 (integer) 0
 ```
@@ -391,12 +391,12 @@ Item already exists (based on false positve rate).
 This API can be used to check if an item exists in a bloom object.
 Response is in the Integer reply format.
 
-Item exists (based on false positve rate).
+Item exists (based on false-positive rate).
 ```
 (integer) 1
 ```
 
-Item does not exist (based on false positve rate).
+Item does not exist (based on false-positive rate).
 ```
 (integer) 0
 ```
@@ -406,9 +406,9 @@ Item does not exist (based on false positve rate).
 This API can be used to add item/s to an existing bloom object or to create + add the item/s.
 Response is the Array reply format with one or more Integer replies (one for each item argument provided).
 
-1 indicates the item does not exist (based on false positve rate) yet and was added successfully to the bloom filter.
+1 indicates the item does not exist (based on false-positive rate) yet and was added successfully to the bloom filter.
 If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
-0 indicates the item already exists (based on false positve rate).
+0 indicates the item already exists (based on false-positive rate).
 ```
 (integer) 1
 (integer) 1
@@ -420,7 +420,7 @@ If a bloom object named <key> does not exist, the bloom object is created and th
 This API can be used to check if item/s exist in a bloom object.
 Response is the Array reply format with one or more Integer replies (one for each item argument provided).
 
-1 indicates the item exists (based on false positve rate). 0 indicates the item does not exist (based on false positve rate).
+1 indicates the item exists (based on false-positive rate). 0 indicates the item does not exist (based on false-positive rate).
 ```
 (integer) 1
 (integer) 1
@@ -479,7 +479,7 @@ When the command is used, only either EXPANSION or NONSCALING can be used. If bo
 the number of items that can be inserted. For scaling, this is the number of items that can be added after which scaling
 occurs.
 
-"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+"EXPANSION" can be used to create a scaling enabled bloom object with the specified expansion rate.
 
 "NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
 full capacity.
@@ -497,12 +497,12 @@ This API is used to create a bloom object with specific properties and add item/
 the number of items that can be inserted. For scaling, this is the number of items that can be added after which scaling
 occurs.
 
-"ERROR" is the false positive error rate.
+"ERROR" is the false-positive error rate.
 
 "NOCREATE" can be used to specify that the command should not result in creation of a new bloom object if it does not exist.
 If NOCREATE is used along with CAPACITY or ERROR, an error is returned.
 
-"EXPANSION" can be used to create a scaling enabled bloom object with the specifed expansion rate.
+"EXPANSION" can be used to create a scaling enabled bloom object with the specified expansion rate.
 
 "NONSCALING" can be used to indicate that the bloom object should not auto scale once items are added such that it reaches
 full capacity. Only either EXPANSION or NONSCALING can be used. If both are used, an error is returned.
@@ -510,9 +510,9 @@ full capacity. Only either EXPANSION or NONSCALING can be used. If both are used
 "ITEMS" can be used to list one or more items to add to the bloom object.
 
 The response is an array reply with one or more Integer replies.
-1 indicates the item does not exist (based on false positve rate) yet and was added successfully to the bloom filter.
+1 indicates the item does not exist (based on false-positive rate) yet and was added successfully to the bloom filter.
 If a bloom object named <key> does not exist, the bloom object is created and the item will be added to it.
-0 indicates the item already exists (based on false positve rate).
+0 indicates the item already exists (based on false-positive rate).
 ```
 (integer) 1
 (integer) 1
@@ -556,7 +556,7 @@ Supported Module configurations:
 2. bf.bloom_expansion_rate: Controls the default expansion rate. When create operations (BF.ADD/MADD) are used, bloom
     objects created will use the expansion rate specified by this config. This controls the capacity of the new filter
     that gets added to the list of filters as a result of scaling.
-3. bf.bloom_fp_rate: Controls the default false positive rate that new bloom objects created (from BF.ADD/MADD) will use.
+3. bf.bloom_fp_rate: Controls the default false-positive rate that new bloom objects created (from BF.ADD/MADD) will use.
 
 ### Constants
 1. bloom_large_item_threshold: Memory usage of a bloom object beyond which bloom objects are exempted from defrag operations
@@ -586,7 +586,7 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
 ```text
 1. enable keyspace event notifications:
     valkey-cli config set notify-keyspace-events KEA
-2. suscribe to keyspace & keyevent event channels:
+2. subscribe to keyspace & keyevent event channels:
     valkey-cli psubscribe '__key*__:*'
 ```
 

@@ -19,7 +19,7 @@ Workflow
 --------
 
 An RFC starts off as a pull request. It's reviewed for formatting, style,
-consisteny and content quality. The content shouldn't be very vague or unclear.
+consistency and content quality. The content shouldn't be very vague or unclear.
 Then the proposal is merged. This doesn't mean that the feature is approved for
 inclusion in Valkey. It's still just a proposal.
 
@@ -27,7 +27,7 @@ Each file has one of the following statuses:
 
 * **Proposed**, meaning the file was added but there's no decision about it yet.
 * **Approved**, meaning the core team has made a decision to accept the feature.
-* **Rejected**, meaning the core team has made a decision to not accpt the feature.
+* **Rejected**, meaning the core team has made a decision to not accept the feature.
 * **Informational**, for information that is not a feature, like this README file.
 
 The core team (the Technical Steering Committee) can change the status and make
