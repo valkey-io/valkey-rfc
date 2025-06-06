@@ -484,7 +484,7 @@ JSON.GET <key>
 
 #### JSON.MGET
 
-Get serialized JSONs at the path from multiple document keys. Return null for non-existent key or JSON path.
+Get serialized JSONs at the path from multiple document keys. Return null for nonexistent key or JSON path.
 
 ##### Syntax
 
