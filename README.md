@@ -27,7 +27,7 @@ Each file has one of the following statuses:
 
 * **Proposed**, meaning the file was added but there's no decision about it yet.
 * **Approved**, meaning the core team has made a decision to accept the feature.
-* **Rejected**, meaning the core team has made a decision to not accpt the feature.
+* **Rejected**, meaning the core team has made a decision to not accept the feature.
 * **Informational**, for information that is not a feature, like this README file.
 
 The core team (the Technical Steering Committee) can change the status and make
