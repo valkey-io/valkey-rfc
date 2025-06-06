@@ -586,7 +586,7 @@ Users can subscribe to the bloom events via the standard keyspace event pub/sub.
 ```text
 1. enable keyspace event notifications:
     valkey-cli config set notify-keyspace-events KEA
-2. suscribe to keyspace & keyevent event channels:
+2. subscribe to keyspace & keyevent event channels:
     valkey-cli psubscribe '__key*__:*'
 ```
 
