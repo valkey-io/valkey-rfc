@@ -118,7 +118,6 @@ The configuration options for this module will be registered using the `ValkeyMo
 The list of configuration options is the following:
 
 - General options
-  - `ldap.auth_enabled`: whether the module should try to authenticate the user using LDAP (default: `yes`)
   - `ldap.auth_method`: the authentication method used. Possible values `bind`, or `search+bind` (default: `bind`)
   - `ldap.servers`: list of LDAP server addresses (space-separated) where each server address has following format `ldap[s]://<hostname>[:<port>]`
     - The default port for `ldap` protocol is 389
