@@ -155,7 +155,7 @@ Each dictionary field may contain the following fields:
 * `url`: the URL of the server as specified in `ldap.servers` configuration options.
 * `status`: the possible values for this field are `healthy`, or `unhealthy`; the `healthy` value denotes that the server is connectable and responds to LDAP operations, and the `unhealthy` value denotes that the server cannot process LDAP operations.
 * `ping_time`: shows the RTT for an simple LDAP operation in milliseconds; this field is only visible for `healthy` servers.
-* `error`: a string value with the cause for setting the server as `unhealthy`ç this field is only visible for `unhealthy` servers.
+* `error`: a string value with the cause for setting the server as `unhealthy`; this field is only visible for `unhealthy` servers.
 
 Example of the output returned by `INFO`:
 ```
