@@ -113,7 +113,7 @@ Upon the module load operation we'll run the following procedures:
 
 ### Configuration
 
-The configuration options for this module will be registered using the `ValkeyModule_RegisterStringConfig` API function, which will allow the user to set and get the options using the `CONFIG SET` and `CONFIG GET` commands.
+The configuration options for this module will be registered using the `ValkeyModule_RegisterStringConfig` API function, which will allow the user to set and get the options using the `CONFIG SET` and `CONFIG GET` commands. Also, all configuration options can be modified at runtime.
 
 The list of configuration options is the following:
 
@@ -160,8 +160,8 @@ Each dictionary field may contain the following fields:
 Example of the output returned by `INFO`:
 ```
 # ldap_status
-ldap_server_0:url=ldap://<hostname>,status=unhealthy,error=<some error message>
-ldap_server_1:url=ldaps://<hostname>,status=healthy,ping_time(ms)=1.645
+ldap_server_0:host=<hostname>,status=unhealthy,error=<some error message>
+ldap_server_1:host=<hostname>,status=healthy,ping_time_ms=1.645
 ```
 
 ### Scalability of authentication requests
