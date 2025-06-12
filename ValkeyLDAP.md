@@ -1,6 +1,6 @@
 ---
 RFC: 20
-Status: Proposed
+Status: Accepted
 ---
 
 # ValkeyLDAP Module RFC
