@@ -1,5 +1,5 @@
 ---
-RFC: (PR number)
+RFC: 24
 Status: (Change to Proposed when it's ready for review)
 ---
 
