@@ -1,6 +1,6 @@
 ---
 RFC: 24
-Status: (Change to Proposed when it's ready for review)
+Status: Proposed
 ---
 
 # Title
@@ -25,7 +25,7 @@ In the context of this RFC.
 | index       | A collection of fields and field-indexes. The object created by the ```FT.CREATE``` command.                                                                                                                                |
 | field-index | A data structure associated with a field that is intended to accelerate the operation of the search operators for this field type.                                                                                          |
 | character   | An Unicode character. A character may occupy 1-4 bytes of a UTF-8 encoded string.                                                                                                                                           |
-| word        | A syntactic unit of text consisting of a vector of characters. A word is delimited by un-escaped punctuation and/or whitespace.                                                                                             |
+| word        | A syntactic unit of text consisting of a list of characters. A word is delimited by un-escaped punctuation and/or whitespace.                                                                                             |
 | token       | same as a word                                                                                                                                                                                                              |
 | text        | A UTF-8 encoded string of bytes.                                                                                                                                                                                            |
 | stemming    | A process of mapping similar words into a common base word. For example, the words _drives_, _drove_ and _driven_ would be replaced with the  _drive_.                                                                      |
@@ -35,20 +35,20 @@ In the context of this RFC.
 ## Design considerations
 
 The text searching facility provides machinery that decomposes text fields into terms and field-indexes them.
-The query facility of the ```FT.SEARCH``` and ```FT.AGGREGATE``` commands is enhanced to select keys based on combinations of term, fuzzy and phrase matching together with the existing selection operators of TAG, Numeric range and Vector searches.
+The query facility of the ```FT.SEARCH``` and ```FT.AGGREGATE``` commands is enhanced to select keys based on combinations of term, fuzzy and phrase matching together with the existing selection operators of Tag, Numeric range and Vector searches.
 
 ### Tokenization process
 
-A tokenization process is applied to strings of text to produce a vector of terms.
+A tokenization process is applied to strings of text to produce a list of terms.
 Tokensization is applied in two contexts. 
 First as part of the ingestion process for text fields of keys.
 Second to process query string words and phrases.
 
 The tokenization process has four steps.
 
-1. The text is tokenized, removing punctuation and redundant whitespace, generating a vector of words.
+1. The text is tokenized, removing punctuation and redundant whitespace, generating a list of words.
 2. Latin upper-case characters are converted to lower-case.
-3. Stop words are removed from the vector.
+3. Stop words are removed from the list.
 4. Words with more than a fixed number of characters are replaced with their stemmed equivalent term according to the selected language.
 ```
 ┌─────────────────┐     ┌───────────────┐     ┌──────────────┐     ┌───────────────┐
@@ -303,7 +303,7 @@ The following diagram illustrates the overall architecture and data flow of the 
 ```
 ## Specification
 
-Each ```TEXT``` field has the a set of configurables some control the process to convert a string into a vector of terms, others control the contents of the generated index.
+Each ```TEXT``` field has the a set of configurations that control the process to convert a string into a list of terms, others control the contents of the generated index.
 
 | Metadata          | Type              | Meaning                                                                    | Default Value |
 | ----------------- | ----------------- | -------------------------------------------------------------------------- | ------------- |
