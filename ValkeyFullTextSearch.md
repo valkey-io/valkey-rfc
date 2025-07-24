@@ -14,6 +14,13 @@ The existing search platform is extended with a new field type, ```TEXT``` is de
 
 Text searching is useful in many applications.
 
+This text search implementation targets developers building low-latency applications with fast and frequently modifying data. We expect dramatically shorter query and ingestion times than other libraries.
+
+Use cases:
+1. Lower Cost per query due to time-optimized data structures and reduced parsing/command processing overhead.
+2. Incremental update machinery. Data structures support incremental updates without GC.
+3. Current queries, i.e., query operations include the most recent mutations, i.e., mutation to query visibility in less than a milisecond.
+
 ## Terminology
 
 In the context of this RFC.
@@ -44,10 +51,12 @@ Tokensization is applied in two contexts.
 First as part of the ingestion process for text fields of keys.
 Second to process query string words and phrases.
 
+The tokenization is language dependent and currently supports English. Logic will need to be extended to support other languages in the future.
+
 The tokenization process has four steps.
 
 1. The text is tokenized, removing punctuation and redundant whitespace, generating a list of words.
-2. Latin upper-case characters are converted to lower-case.
+2. Upper-case characters are converted to lower-case.
 3. Stop words are removed from the list.
 4. Words with more than a fixed number of characters are replaced with their stemmed equivalent term according to the selected language.
 ```
@@ -118,7 +127,7 @@ Unlike the Vector, Tag and Numeric search operators the specification of a field
 
 There are three types of term matching: exact, wildcard and fuzzy. Exact term matching is self-descriptive, i.e., only keys containing exactly the specified text are matched.
 
-Wildcard matching provides a subset of reg-ex style matching of terms.
+Wildcard matching provides a simple glob style search.
 Initially, only a single wildcard specifier ```*``` is allowed which matches any number of characters in a term.
 The wildcard can be at any position within the term, providing prefix, suffix and infix style matching.
 Note, in this proposal, the second prefix tree is required to perform infix and suffix matching.
@@ -324,19 +333,6 @@ If supplied as part of an individual field declaration, i.e., after the ```SCHEM
 ```
 The characters of this string are used to split the input string into words. Note, the splitting process allows escaping of input characters using the usual backslash notation. This string cannot be empty. Default value is: _TBD_
 
-
-```
-[WITHSUFFIXTRIE | NOSUFFIXTRIE]
-```
-
-Controls the presence/absence of the second prefix tree in the field-index. Default is ```NOSUFFIXTRIE```.
-
-```
-[WITHOFFSETS | NOOFFSETS]
-```
-
-Controls whether term-offsets are tracked in the field-index. Default is ```WITHOFFSETS```.
-
 ```
 [NOSTOPWORDS | STOPWORDS <count> [word ...]]
 ```
@@ -359,9 +355,21 @@ This clause controls the minimum number of characters in a word before it is sub
 
 Controls the stemming algorithm. Supported languages are: 
 
-**none, arabic, armenian, basque, catalan, danish, dutch, english, estonian, finnish, french, german, greek, hindi, hungarian, indonesian, irish, italian, lithuanian, nepali, norwegian, porter, portuguese, romanian, russian, scripts, serbian, spanish, swedish, tamil, turkish, yiddish**
+**none, english**
 
 The default language is **english**. Note: ```LANGUAGE none``` is equivalent to ```NOSTEM```.
+
+```
+[WITHSUFFIXTRIE | NOSUFFIXTRIE]
+```
+
+Controls the presence/absence of the second prefix tree in the field-index. Default is ```NOSUFFIXTRIE```.
+
+```
+[WITHOFFSETS | NOOFFSETS]
+```
+
+Controls whether term-offsets are tracked in the field-index. Default is ```WITHOFFSETS```.
 
 ### Query Language Extensions
 
@@ -389,4 +397,5 @@ To avoid combinatorial explosion certain operations have configurable limits app
 
 ### Dependencies
 
-snowball library https://snowballstem.org/ and https://github.com/snowballstem
+snowball library https://snowballstem.org/ and https://github.com/snowballstem. Languages supported by this library are: arabic, armenian, basque, catalan, danish, dutch, english, estonian, finnish, french, german, greek, hindi, hungarian, indonesian, irish, italian, lithuanian, nepali, norwegian, porter, portuguese, romanian, russian, scripts, serbian, spanish, swedish, tamil, turkish, and yiddish.
+Note: When we plan to support additional languages, if snowball does not it (e.g. hebrew), we will need to use an alternative stemming process for that particular language.
