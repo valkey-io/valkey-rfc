@@ -47,7 +47,7 @@ The query facility of the ```FT.SEARCH``` and ```FT.AGGREGATE``` commands is enh
 ### Tokenization process
 
 A tokenization process is applied to strings of text to produce a list of terms.
-Tokensization is applied in two contexts. 
+Tokenization is applied in two contexts.
 First as part of the ingestion process for text fields of keys.
 Second to process query string words and phrases.
 
@@ -125,7 +125,7 @@ Unlike the Vector, Tag and Numeric search operators the specification of a field
 
 #### Term matching
 
-There are three types of term matching: exact, wildcard and fuzzy. Exact term matching is self-descriptive, i.e., only keys containing exactly the specified text are matched.
+There are three types of term matching: exact, wildcard and fuzzy. Exact term matching operates on the normalized terms after pre-processing (tokenization, lowercasing, stemming if enabled) and only the matched keys are returned. It does not match the raw input string exactly.
 
 Wildcard matching provides a simple glob style search.
 Initially, only a single wildcard specifier ```*``` is allowed which matches any number of characters in a term.
@@ -388,14 +388,15 @@ Phrase matching is specified by enclosing a sequence of terms in a pair of doubl
 
 ### Limits
 
-To avoid combinatorial explosion certain operations have configurable limits applied.
+To avoid combinatorial explosion certain operations have configurable limits are listed below:
 
-| Name                 | Default | Limit                                                             |
-| -------------------- | ------- | ----------------------------------------------------------------- |
-| max-fuzzy-distance   | 2       | The maximum edit distance for a fuzzy search.                     |
-| max-wildcard-matches | 200     | Maximum number of words that a single wildcard match can generate |
+| Name                 | Default | Limit                                                                         |
+| -------------------- | ------- | ------------------------------------------------------------------------------|
+| max-fuzzy-distance   | 2       | The maximum edit distance for a fuzzy search.                                 |
+| max-expansions       | 200     | Maximum number of words that a single wildcard / fuzzy match can generate     |
+| max-search-results   | TBD.    | Maximum search results for a query search when limits are not applied         |
 
 ### Dependencies
 
 snowball library https://snowballstem.org/ and https://github.com/snowballstem. Languages supported by this library are: arabic, armenian, basque, catalan, danish, dutch, english, estonian, finnish, french, german, greek, hindi, hungarian, indonesian, irish, italian, lithuanian, nepali, norwegian, porter, portuguese, romanian, russian, scripts, serbian, spanish, swedish, tamil, turkish, and yiddish.
-Note: When we plan to support additional languages, if snowball does not it (e.g. hebrew), we will need to use an alternative stemming process for that particular language.
+Note: When we plan to support additional languages, if snowball does not support it (e.g. hebrew), we will need to use an alternative stemming process for that particular language.
