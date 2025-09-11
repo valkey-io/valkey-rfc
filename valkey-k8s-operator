@@ -1,0 +1,259 @@
+RFC: 21
+Status: Proposed
+
+Valkey Kubernetes Operator RFC
+
+Abstract
+
+This RFC proposes the development of an open-source Kubernetes Operator for Valkey. 
+The Operator will automate the provisioning, configuration, and lifecycle management of Valkey clusters within Kubernetes environments. 
+It will support standalone and Sentinel-based deployments, integrate with cert-manager for TLS, expose Prometheus metrics, and support persistent storage configurations, offering production-grade capabilities for cloud-native environments.
+
+Motivation
+
+Operating Valkey at scale in Kubernetes environments remains complex and time-consuming. 
+Most enterprise users currently manage Valkey deployments manually or via generic Helm charts, lacking production-readiness, automation, or compliance guarantees.
+
+This Operator addresses those challenges by:
+- Providing a Kubernetes-native way to deploy and manage Valkey
+- Enabling self-service for developers via CRDs
+- Automating TLS setup, monitoring, and failover
+- Supporting advanced production use cases like Sentinel HA and persistent storage
+- Matching enterprise expectations for security, observability, and compliance
+
+Unlike Redis, which has various third-party operators with unclear support models, Valkey has the opportunity to lead with an officially supported Kubernetes-native experience.
+
+Design considerations
+
+The operator will be implemented using Kubebuilder and based on the Bitnami Helm chart for Valkey. 
+It will expose a Custom Resource Definition (CRD) named `Valkey`, allowing users to declaratively deploy Valkey instances via YAML.
+
+Key design principles:
+- User-first: Apply 10 lines of YAML and get a working, HA Valkey deployment.
+- Composability: Work alongside tools like cert-manager, Prometheus Operator, and Everest.
+- Security: TLS and credential management must be default-safe.
+- Modularity: Start simple (standalone + Sentinel), then iterate (autoscaling, dashboards).
+- Observability: First-class Prometheus support out-of-the-box.
+
+Comparative notes:
+- SAP’s internal `valkey-operator` is optimized for Sentinel and metrics but is not distribution-friendly.
+- Hyperspike’s operator is more lightweight and public, but lacks Sentinel and TLS support.
+This RFC proposes an open-source Valkey operator that balances ease of use and production-grade features.
+
+Specification
+
+CRD Schema Overview
+
+```yaml
+apiVersion: cache.percona.com/v1alpha1
+kind: Valkey
+metadata:
+  name: my-valkey
+spec:
+  replicas: 3
+  sentinel:
+    enabled: true
+  metrics:
+    enabled: true
+  tls:
+    enabled: true
+  persistence:
+    enabled: true
+    type: both
+    storageClass: fast-disks
+    size: 5Gi
+  config:
+    configMapName: custom-valkey-conf
+  modules:
+    - name: redisbloom.so
+      path: /opt/valkey/modules/redisbloom.so
+```
+
+Operator Behavior
+
+- Deploys Bitnami Valkey chart under the hood.
+- Supports 2 modes:
+  - Standalone: 1 primary, optional replicas.
+  - Sentinel: quorum-based HA with automatic failover.
+- Exposes Valkey connection info as a Kubernetes `Secret`.
+- Handles TLS setup via cert-manager or self-signed certs.
+- Optionally loads custom config via ConfigMap.
+- Optional metrics sidecar for Prometheus scraping.
+
+Configuration
+
+| Feature             | Config Options                                                                 |
+|---------------------|--------------------------------------------------------------------------------|
+| Deployment Mode     | `spec.sentinel.enabled: true/false`                                           |
+| TLS                 | `spec.tls.enabled: true` with cert-manager integration                         |
+| Persistence         | `spec.persistence.type: rdb/aof/both`, `storageClass`, `size`                 |
+| Modules             | `spec.modules`: list of `.so` modules to include                               |
+| Monitoring          | `spec.metrics.enabled: true`                                                   |
+| Custom Config       | `spec.config.configMapName`                                                   |
+| Pod Customization   | node selectors, tolerations, resource limits, securityContext, etc.           |
+
+Secret Output
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: valkey-test-binding
+type: Opaque
+stringData:
+  host: valkey-test.svc
+  port: "6379"
+  password: ********
+  sentinelHost: valkey-test.svc
+  sentinelPort: "26379"
+  tlsEnabled: "true"
+```
+
+Authentication and Authorization
+
+- No RBAC-specific changes are needed outside standard Kubernetes role management.
+- Valkey credentials are stored in Kubernetes Secrets.
+- TLS certs issued via cert-manager will follow existing RBAC rules.
+
+RDB
+
+- Persistence modes include:
+  - `rdb`: periodic snapshotting
+  - `aof`: append-only logging
+  - `both`: hybrid approach (default for production)
+
+Configuration (Runtime)
+
+- Users can override default Helm values using CR fields or a `valkey.conf` file via ConfigMap.
+- Sensitive data like passwords are not stored in the config map and are auto-generated and stored in Secrets.
+
+Keyspace notifications
+
+N/A – this Operator does not modify Valkey internals; only orchestrates deployment.
+
+Cluster mode
+
+- Sentinel mode uses quorum-based failover.
+- Standalone mode supports scaling replicas.
+
+Module API
+
+- Users can opt-in to modules like `Search`, `Bloom`, and `JSON` by including them in the container image and enabling via `valkey.conf`.
+
+Replication
+
+- Sentinel handles failover logic.
+- Operator ensures correct replica configurations based on `spec.replicas`.
+
+Dependencies
+
+- Bitnami Valkey Helm Chart
+- cert-manager (optional)
+- Prometheus Operator (optional)
+
+Benchmarking
+
+Target SLAs:
+- P95 provisioning time: <60s
+- 99.9% uptime for Sentinel deployments
+- ≥80% usage via CRs (vs manual installs)
+- <1 manual intervention per 100 deployments
+
+Testing
+
+Automated tests will include:
+- CR validation
+- Smoke tests on Minikube
+- Sentinel failover simulation
+- TLS Secret injection
+- Custom ConfigMap override
+
+CI/CD pipeline to be integrated with GitHub Actions.
+
+Observability
+
+- Prometheus metrics sidecar container included.
+- Optional ServiceMonitor created if Prometheus Operator is installed.
+- Success metric: 100% Prometheus scrape coverage when metrics enabled.
+
+Debug mechanism
+
+- Operator logs will include CR status transitions.
+- Valkey pod logs exposed via standard `kubectl logs`.
+- Failures surfaced via CR `.status` field with conditions.
+
+
+Sentinel-Based HA Valkey Topology Support
+
+This RFC also incorporates support for a production-grade, Sentinel-based HA deployment strategy for Valkey in Kubernetes. 
+The proposed operator will reflect learnings from past experience managing Valkey via customized Helm charts and StatefulSets, optimizing for resilience, AZ-awareness, and automation.
+
+Goals
+
+- Shard-based deployments (per cache type) using Sentinel-managed HA
+- Flexible deployment of masters, replicas, and Sentinel in separate StatefulSets
+- AZ-aware scheduling to avoid cross-AZ traffic and latency
+- Clear control over replica counts and placement
+- Optional integration of a custom controller for master awareness and controlled failover
+
+Design Overview
+
+Each Valkey Shard will be backed by multiple Kubernetes resources:
+
+- A StatefulSet for the master (1 pod, zone-pinned, highest priority)
+- One or more StatefulSets for replicas, deployed in secondary/tertiary zones
+- A StatefulSet for Sentinels, decoupled from Valkey for scaling flexibility
+- Dedicated Services per pod for connection management and DNS discovery
+
+Failover orchestration may be introduced via an optional `Failover` CRD and controller logic to promote a specific pod or trigger automatic failover.
+
+Custom resource example (`ValkeyShard`):
+
+```yaml
+apiVersion: example.com/v1alpha
+kind: ValkeyShard
+metadata:
+  name: cache-0
+spec:
+  replicas: 3
+  image: valkey:7.2.5-alpine
+  shardIndex: 0
+  parentRedis: cache
+  config:
+    maxmemory: "3gb"
+  sentinel:
+    config:
+      down-after-milliseconds: "10000"
+      failover-timeout: "180000"
+```
+
+Custom resource example (`Failover`):
+
+```yaml
+apiVersion: example.com/v1alpha
+kind: Failover
+metadata:
+  name: failover-cache-0
+spec:
+  redisShard: cache-0
+  targetMaster: cache-0-server-2
+  force: false
+  timeout: 300s
+```
+
+Benefits
+
+- Reduced disruption by decoupling sidecars (e.g., filebeat, sentinel)
+- Predictable master placement across availability zones
+- Flexible read-replica configuration (scale to 1 or 2 as needed)
+- Clearer operational visibility via CR `.status` fields (e.g., current master)
+- Future-proofed for Sentinel replacements
+
+This topology is already under internal testing via a custom operator built during an internal hackathon, with promising results. This RFC proposes evolving that prototype into a supported, production-grade capability.
+
+
+Appendix
+
+- [ValkeyLDAP RFC as implementation reference]
+- [Operator PRD (source for goals and user stories)]
+- [Bitnami Helm Chart for Redis/Valkey (base)](https://github.com/bitnami/charts/tree/main/bitnami/redis)
