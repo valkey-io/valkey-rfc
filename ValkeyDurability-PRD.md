@@ -13,7 +13,7 @@ lost if the primary fails before replicas make the write durable. The existing `
 specified number of replicas have recorded the write. However, this propagation-based
 acknowledgement does not provide a design-level guarantee of durability across all topology
 changes, including failover, replica additions/removals, and horizontal scaling via slot
-migration..
+migration.
 
 
 ## **Motivation**
