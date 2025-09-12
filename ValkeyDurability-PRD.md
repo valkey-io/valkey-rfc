@@ -108,3 +108,8 @@ that avoids the I/O and network latency costs of a durable, quorum-based commit.
 extensible foundation for future high-value features, most notably **data tiering**. This would
 enable Valkey to cost-effectively manage datasets that are significantly larger than available
 memory.
+
+* **Self-Sufficient High Availability**: The solution must provide robust, application-level high
+availability. The system must be self-sufficient and manage its own state, consensus, and replication
+without reliance on specialized, external, or infrastructure-level mechanisms for durability or
+availability.
