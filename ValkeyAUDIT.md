@@ -125,52 +125,53 @@ The configuration options for this module will be registered using the `ValkeyMo
 The list of configuration options is the following:
 
 #### General options
-- `audit.log.enabled`: whether the logging of audit events is enabled.
-- `audit.log.format`: the format of audit log messages
-- `audit.log.command.payload`: either true or false (default: `false`)
-- `audit.log.command.payload_length`: the length in characters of the payload in the case that payload logging is enabled.
-- `audit.log.memory.max_events`: the maximum number of events to held in memory.
-- `audit.log.exclude.types`: the comma separated list of event types to exclude from logging. Possible values `connect, disconnect, authentication, command`, (default: empty string).
+- `audit.enabled`: whether the logging of audit events is enabled.
+- `audit.format`: the format of audit log messages
+- `audit.payload_disable`: whether or not to log the payload of key commands (default: `false`)
+- `audit.payload_maxsize`: the length in characters of the payload in the case that payload logging is enabled
+- `audit.always_audit_config`: enable or disable the auditing of config commands regardless of per user events setting. This allows the logging of config commands for a user even if the user is in the exclusion list.
 
-#### Filesystem options
-- `audit.file.enabled`: whether the logging to a filesystem file is enabled.
-- `audit.file.path`: the filesystem path of the file to store the audit events.
-- `audit.file.perms`: the file permissions mask for the logging file (default: `640`).
+#### Protocol and options
+- `audit.protocol`: file, syslog or tcp
+  E.g.
+  - `audit.protocol file /tmp/audit.log`
+  - `audit.protocol syslog local0`
+  - `audit.protocol tcp 127.0.0.1:532`
+- `audit.tcp_host` : the target host for TCP destination
+- `audit.tcp_port` : the target port for TCP destination
+- `audit.tcp_buffer_on_disconnect` : whether or not to keep the messages in the buffer if TCP disconnected (limited to buffer size)
+- `audit.tcp_timeout_ms` : timeout in ms for establishing TCP connection
+- `audit.tcp_max_retries` : maximum number of times to retry sending
+- `audit.tcp_retry_interval_ms`: retry interval for establishing TCP connections
 
-#### Syslog options
-- `audit.syslog.enabled` whether the logging to a syslog compatible system is enabled.
-- `audit.syslog.facility`: the syslog facility (default: `daemon`).
-- `audit.syslog.tag`: the tag to added to the server identifier `valkey-<tag>` (default: empty string).
+#### Exclusion
+- `audit.events` : event categories to audit (connections,auth,config,keys,other,none,all)
+- `audit.excluderules` : Specific usernames and/or IP addresses to exclude from auditing
 
-### Commands 
+### Monitoring 
 
-#### `AUDIT.STATUS`
+#### `INFO AUDIT`
 
 Returns the information about the module configuration, the status of the memory circular buffer, and some statistics of the background threads, in the form of a dictionary value.
 
 Example:
 
-- logging
-  - file: enabled
-    - enabled: `true`
-    - path: `<file path>`
-  - syslog:
-    - enabled: `true`
-    - facility: `<facility>`
-  - stats:
-    - events:
-      - current: `<number of events in memory>`
-      - total: `<total number of events logged>`
-      - connect: `<total number of connect events logged>`
-      - disconnect: `<total number of disconnect events logged>`
-      - auth: `<total number of auth events logged>`
-      - command: `<total number of command events logged>`
-    - throughput
-      - last minute:
-        - logged: `<number of events logged per second>`
-        - flushed: `<number of events flushed per second>`
-      - last hour:
-        - logged: `<number of events logged per minute>`
-        - flushed: `<number of events flushed per minute>`
+info audit
 
-  
+\# audit_audit
+
+`audit_total_events:3`
+
+`audit_total_errors:0`
+
+`audit_exclusion_hits:0`
+
+`audit_uptime_seconds:10`
+
+`audit_file_status:connected`
+
+`audit_syslog_status:disconnected`
+
+`audit_tcp_status:disconnected`
+
+`audit_error_rate_percent:0`
