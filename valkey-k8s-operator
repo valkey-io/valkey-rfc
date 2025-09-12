@@ -227,7 +227,7 @@ spec:
   replicas: 3
   image: valkey:7.2.5-alpine
   shardIndex: 0
-  parentRedis: cache
+  parentValkey: cache
   config:
     maxmemory: "3gb"
   sentinel:
