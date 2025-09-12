@@ -14,26 +14,33 @@ Motivation
 Operating Valkey at scale in Kubernetes environments remains complex and time-consuming. 
 Most enterprise users currently manage Valkey deployments manually or via generic Helm charts, lacking production-readiness, automation, or compliance guarantees.
 
-This Operator addresses those challenges by:
-- Providing a Kubernetes-native way to deploy and manage Valkey
+This Operator addresses these challenges by:
+- Providing a Kubernetes-native way to deploy and manage cluster mode Valkey, which is the only deployment type that provides HA and horizontal scaling.
 - Enabling self-service for developers via CRDs
 - Automating TLS setup, monitoring, and failover
-- Supporting advanced production use cases like Sentinel HA and persistent storage
+- Supporting advanced production use cases:
+  - Cluster mode deployments with multiple Sentinel-managed shards
+  - Persistent storage and backup/restore workflows
+- Providing simplified standalone or Sentinel-only deployments for smaller or test environments where full cluster mode is unnecessary
 - Matching enterprise expectations for security, observability, and compliance
 
 Unlike Redis, which has various third-party operators with unclear support models, Valkey has the opportunity to lead with an officially supported Kubernetes-native experience.
 
 Design considerations
 
-The operator will be implemented using Kubebuilder and based on the Bitnami Helm chart for Valkey. 
-It will expose a Custom Resource Definition (CRD) named `Valkey`, allowing users to declaratively deploy Valkey instances via YAML.
+The operator will be implemented using Kubebuilder and expose a Custom Resource Definition (CRD) named `Valkey`, allowing users to declaratively deploy Valkey instances via YAML. 
 
 Key design principles:
 - User-first: Apply 10 lines of YAML and get a working, HA Valkey deployment.
+- Cluster-first focus: Prioritize cluster mode as the production-grade setup — HA, scalable, and resilient
+- Fallback / simpler modes: Support standalone and Sentinel HA deployments for small-scale or testing environments
 - Composability: Work alongside tools like cert-manager, Prometheus Operator, and Everest.
 - Security: TLS and credential management must be default-safe.
 - Modularity: Start simple (standalone + Sentinel), then iterate (autoscaling, dashboards).
 - Observability: First-class Prometheus support out-of-the-box.
+- Deployment approach: The operator will rely on either:
+  - A fully open-source Helm chart maintained internally
+  - Direct deployment manifests managed by the operator itself
 
 Comparative notes:
 - SAP’s internal `valkey-operator` is optimized for Sentinel and metrics but is not distribution-friendly.
@@ -43,6 +50,7 @@ This RFC proposes an open-source Valkey operator that balances ease of use and p
 Specification
 
 CRD Schema Overview
+mode: cluster (recommended for production), sentinel (HA for small-scale), standalone (simple deployments or dev/test)
 
 ```yaml
 apiVersion: cache.percona.com/v1alpha1
@@ -50,6 +58,7 @@ kind: Valkey
 metadata:
   name: my-valkey
 spec:
+  mode: cluster
   replicas: 3
   sentinel:
     enabled: true
@@ -65,8 +74,8 @@ spec:
   config:
     configMapName: custom-valkey-conf
   modules:
-    - name: redisbloom.so
-      path: /opt/valkey/modules/redisbloom.so
+    - name: libvalkey_bloom.so
+      path: /opt/valkey/modules/libvalkey_bloom.so
 ```
 
 Operator Behavior
@@ -200,7 +209,7 @@ Design Overview
 
 Each Valkey Shard will be backed by multiple Kubernetes resources:
 
-- A StatefulSet for the master (1 pod, zone-pinned, highest priority)
+- A StatefulSet for the primary (1 pod, zone-pinned, highest priority)
 - One or more StatefulSets for replicas, deployed in secondary/tertiary zones
 - A StatefulSet for Sentinels, decoupled from Valkey for scaling flexibility
 - Dedicated Services per pod for connection management and DNS discovery
@@ -256,4 +265,3 @@ Appendix
 
 - [ValkeyLDAP RFC as implementation reference]
 - [Operator PRD (source for goals and user stories)]
-- [Bitnami Helm Chart for Redis/Valkey (base)](https://github.com/bitnami/charts/tree/main/bitnami/redis)
