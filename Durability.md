@@ -233,7 +233,7 @@ Here we cover various operation via sequence diagram within a shard.
 
 ### Lifecycle of a read command ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-lifecycle-of-a-read-command))
 
-![./assets/UML.md#uml-code-for-lifecycle-of-a-read-command](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/ReadCommand.png)
+![./assets/UML.md#uml-code-for-lifecycle-of-a-read-command](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/ReadCommand.svg)
 
 ## Failure Handling
 
