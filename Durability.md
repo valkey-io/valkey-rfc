@@ -146,7 +146,7 @@ In the write-behind logging approach, a command is first applied to the primary�
 
 With all the complexity outlined above for WAL mechanism in supporting all the existing functionality with durability, the plan is to proceed with write-behind logging to keep the implementation layer simple and broadly inline with the current design of Valkey where the operation execution is followed by replication.
 
-#### Log Compaction ([UML Code](./assets/UML.md#uml-code-for-log-compaction))
+#### Log Compaction ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-log-compaction))
 
 Log compaction is the process of truncating old, committed log entries that are no longer required for recovery, replacing them with a compact snapshot of the current state. This ensures that the replicated log remains bounded in size, preventing unbounded memory growth and reducing catch-up time for lagging replicas.
 
@@ -204,7 +204,7 @@ Here we cover various operation via sequence diagram within a shard.
 3. Primary removal
 4. Replica removal
 
-### Bootstrap ([UML code](./assets/UML.md#uml-code-for-bootstrap))
+### Bootstrap ([UML code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-bootstrap))
 
 ![Bootstrap](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/ClusterBootstrap.png)
 
@@ -215,36 +215,36 @@ Here we cover various operation via sequence diagram within a shard.
 >   * Hence, new nodes can discover peers via the `shard-nodes` config which is a list of ip:port address.
 > * When to start the initialization phase? - To be added
 
-### Node addition([UML Code](./assets/UML.md#uml-code-for-node-addition))
+### Node addition([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-node-addition))
 
 ![Node Addition](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/NodeAddition.png)
 
-### Primary removal ([UML Code](./assets/UML.md#uml-code-for-primary-removal))
+### Primary removal ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-primary-removal))
 
 ![Primary Removal](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/PrimaryRemoval.svg)
 
-### Replica removal ([UML Code](./assets/UML.md#uml-code-for-replica-removal))
+### Replica removal ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-replica-removal))
 
 ![Replica Removal](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/ReplicaRemoval.svg)
 
-### Lifecycle of a write command ([UML Code](./assets/UML.md#uml-code-for-lifecycle-of-a-write-command))
+### Lifecycle of a write command ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-lifecycle-of-a-write-command))
 
 ![Lifecycle of a write command](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/WriteCommand.svg)
 
-### Lifecycle of a read command ([UML Code](./assets/UML.md#uml-code-for-lifecycle-of-a-read-command))
+### Lifecycle of a read command ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-lifecycle-of-a-read-command))
 
 ![./assets/UML.md#uml-code-for-lifecycle-of-a-read-command](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/ReadCommand.png)
 
 ## Failure Handling
 
-### Primary liveness ([UML Code](./assets/UML.md#uml-code-for-leader-liveness))
+### Primary liveness ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-leader-liveness))
 
 The primary maintains liveness through periodic heartbeat messages sent to all replicas within the shard.
 These heartbeats are implemented as empty `AppendEntries` RPCs and serve to assert the leader’s authority, prevent election timeouts on followers, and detect connectivity issues early.
 
 ![Lifecycle of heartbeat](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/Heartbeat.png)
 
-### Primary Failure (Automatic Failover) ([UML Code](./assets/UML.md#uml-code-for-primary-failure))
+### Primary Failure (Automatic Failover) ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-primary-failure))
 
 If a replica fails to receive heartbeats within its election timeout window, it transitions to a candidate state and initiates a new term election. This mechanism ensures continuous availability and timely leader re-election in the presence of network delays or partial failures, without requiring an administrator/operator involvement.
 
@@ -265,7 +265,7 @@ Throughout this process, slow replicas are excluded from quorum calculations, en
 
 ![Slow or Lagging Replica](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/SlowReplica.svg)
 
-### Complete Write Outage ([UML Code](./assets/UML.md#uml-code-for-write-outage))
+### Complete Write Outage ([UML Code](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md#uml-code-for-write-outage))
 
 Complete write outage in a shard can be observed when quorum isn’t possible to reach for a write operation. This could be due to network partition for a period exceeding the timeout period of a client and the operation result couldn't be acknowledged back to the client. This would leave the primary dirty and in an inconsistent state. Hence, it's required to perform a failover and replay the local log upto the committed entries on the new primary to stabilize the node.
 
@@ -335,4 +335,4 @@ Pardon me if I accidentally missed out people's name (send me a DM, I will get i
 
 1. Requirements - https://github.com/valkey-io/valkey-rfc/pull/29/
 2. RAFT - In Search of an Understandable Consensus Algorithm https://raft.github.io/raft.pdf
-3. All the UML based sequence diagram code can be found under [./assets/UML.md](./assets/UML.md)
+3. All the UML based sequence diagram code can be found under [./assets/UML.md](https://github.com/hpatro/valkey-rfc/blob/durability_hld/assets/UML.md)

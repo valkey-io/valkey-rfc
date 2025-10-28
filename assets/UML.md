@@ -402,10 +402,10 @@ autonumber
 Client -> P: Read operation on key K
 P -> P: Verify if the key is blocked for operation
 alt Blocked
-  P -> P: Block the client
+  P -> P: Speculatively execute the operation and add the response to client buffer
+  P -> P: Block the client until offset is reached.
   ... wait until unblocked ...
-  P -> P: Unblock client
-  P -> P: Execute the operation
+  P -> P: Unblock client write handler
   P -> Client: Write response
 else Not Blocked
   P -> P: Execute the operation
