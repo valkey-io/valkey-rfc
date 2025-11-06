@@ -1,10 +1,10 @@
 ---
-RFC: 24
+RFC: 21
 Status: Proposed
 ---
 
 # Title
-Text Searching
+Full Text Search
 
 ## Abstract
 
@@ -23,14 +23,14 @@ Characteristics of the full text search engine:
 
 Use cases:
 * Chat / Session History Search
- * Per-user session data loaded at login/web session initiation
- * Enables searching through user interaction history, chat, commands, or activity logs
- * Provides fast retrieval of relevant past sessions or actions
+  * Per-user session data loaded at login/web session initiation
+  * Enables searching through user interaction history, chat, commands, or activity logs
+  * Provides fast retrieval of relevant past sessions or actions
 
 * RAG (Retrieval-Augmented Generation) Operations
- * Complex text content / filtering that can't be predicted or converted to TAG operations
- * Handles unpredictable phrasing and natural language queries
- * Combines with vector similarity search for hybrid workloads
+  * Complex text content / filtering that can't be predicted or converted to TAG operations
+  * Handles unpredictable phrasing and natural language queries
+  * Combines with vector similarity search for hybrid workloads
 
 ## Terminology
 
@@ -158,8 +158,8 @@ Term matching operates on the normalized terms after pre-processing (tokenizatio
 
 | Example | Interpretation | Required Index Options |
 |:-:|---|:-:|
-| `'abcd'` | This is either stemmed search | none |
-| `'abcd'` | This is an exact match search | NOSTEM |
+| `'abcd'` | This is a stemmed search | none |
+| `'abcd'` | This is an exact match search due to the index spefication of NOSTEM | NOSTEM |
 | `'"abcd"'` | This is an exact match search | none |
 | `'abcd'` VERBATIM | This is an exact match search | none |
 
@@ -426,6 +426,31 @@ To avoid combinatorial explosion certain operations have configurable limits are
 | max-fuzzy-distance   | 3       | The maximum edit distance for a fuzzy search.                                 |
 | max-expansions       | 200     | Maximum number of words that a single wildcard / fuzzy match can generate     |
 | max-search-results   | TBD.    | Maximum search results for a query search when limits are not applied         |
+
+
+### Handling multi language indexes
+
+The initial release is planned such that a single language is specified per-index upon its creation.
+
+To avoid an index from ingesting documents of other languages, in the initial release, you can leverage the PREFIX option in FT.CREATE
+to choose different prefixes of the document key names and separate documents of different languages based on this.
+
+In the future releases, these are potential solutions to support multi language indexes (`#1 below`) and to avoid multi language indexes (`#2 below`) through an improved experience:
+
+1. In a future release of the valkey-search, the LANGUAGE_FIELD can be specified in the FT.CREATE command to hold a field name which can be used to mark documents with the language to use when ingesting that document.
+This will allow a single index created by FT.CREATE to support ingesting documents of multiple languages.
+To search on the index, FT.SEARCH can be used with a LANGUAGE command argument that indicates how the query string should be processed into tokens.
+
+2. Another future-feature is updating index definition by adding the FILTER option to the FT.CREATE command, which would allow dynamic selection of index membership based on prefixes AND an arbitrary expression. So if, for example, document 1 had a field marked "English" and document 2 had that same field marked as "Italian", then you could create an index with language English, containing JUST english documents. Likewise a second index of Italian documents could contain just those documents.
+Unlike, 1 above (which provides a solution for multi language indexes) this option is meant to safely avoid multi language indexes using the FILTER option.
+
+```
+# Documents with the name field starting with 'V':
+FILTER 'startswith(@name, "V")'
+
+# Documents without any title field:
+FILTER '@title != ""'
+```
 
 ### Dependencies
 
