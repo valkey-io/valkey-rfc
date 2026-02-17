@@ -27,17 +27,22 @@ Some examples where a specific key can contribute to resource consumption includ
 4. Very large keys can contribute to memory imbalance across cluster slots, impacting slot placement decisions during scaling.
 5. Unbalanced cluster slots memory can be a result of application side bug causing a specific key to become much bigger than the average key size.    
 
-Per slot statistics can also assist in identifying cluster wide hotspots in a Valkey cluster, however they are limited in their ability to pin-point the specific item
-which is the top contributor.
-using external client tools can also be used in order to identify hot-keys, big-keys and mem-keys, by scanning all of the cluster dataset (eg `valkey-cli`). 
-However there are several issues with this method:
+### Existing alternatives
+- Per slot statistics can also assist in identifying cluster wide hotspots in a Valkey cluster, however they are limited in their ability to pin-point the specific item
+  which is the top contributor.
+
+- using external client tools can also be used in order to identify hot-keys, big-keys and mem-keys, by scanning all of the cluster dataset (eg `valkey-cli`). 
+  However there are several issues with this method:
 1. Scanning through the entire dataset can take relatively long time and can result in a multi hours wait time, until the full statistics are finalized.
 2. hot-keys analysis is currently only possible when the eviction policy is set to LFU (when access frequency is managed on per-key level)
 3. This require client side implementation or application logic which needs to be built and maintained.   
 
-In this proposal We will provide a top contributor analysis, rather than a filtered set or distribution analysis.
-Existing Valkey observability tools like `SLOWLOG` and `COMMANDLOG` already support tracking slow commands or network bursts.
-Therefore, this proposal focuses on **hot key access frequency**, **key cardinality** and **key memory** , which are the most actionable signals during incidents.
+- Existing Valkey observability tools like `SLOWLOG` and `COMMANDLOG` already support tracking slow commands or network bursts.
+  The user can use these tool in order to identify the commands which consumed high CPU time or high network utilization. The user can then, identify the keys used in these commands to determine the  potential top contributor. There are some drawbacks: 
+1. `COMMAND LOG` has no indication of the database, which means that the user might not be able to pinpoint the specific key when it can exist in many databases.
+   However, this seems like a niche case and we can solve this by adding the database to the command log output (in some cases there can be more than one...).
+2. `COMMAND LOG` is good for post-mortem RCA. Although this is the main motivation in many cases, there are potentially some cases were the user is simply interested in performing a pre-mortem analysis. 
+   For example, the user would like to understand if he has very large keys and take remediation actions before starting to apply his workload.
 
 ### Do we need to provide top contributor analysis based on key's memory footprint?
 Key cardinality can be considered as a good estimation for memory consumption, since it is expected that big keys will also consume more memory.
@@ -195,26 +200,10 @@ These are high-level suggested configurations. Additional tuning options may be 
 
 ### Hot Keys
 
-`hotkeys-max-n <integer>` 
-Maximum number of keys returned for HOTKEYS.
+`topkeys-max-n <integer>` 
+Maximum number of keys that can be returned for HOTKEYS/BIGKEYS/MEMKEYS.
 Controls memory usage and ensures Top-N lists remain bounded.
 Default: 10
-
-`hotkeys-read-access-threshold <integer>` - default 3000
-`hotkeys-write-access-threshold <integer>` - default 2000
-Threashold configuration.  Only keys exceeding these QPS thresholds appear in HOTKEYS output. Prevents low-activity keys from cluttering results.
-
-### TopKeys 
-
-`topkeys-min-card <integer>`
-Keys must exceed this cardinality to appear in TOPKEYS CARDINALITY.
-default 1024
-
-`topkeys-min-memory <memory>`
-Only keys consuming more memory than this appear in TOPKEYS MEMORY.
-default 1mb
-
-
 ---
 
 ### Keyspace notifications (Optional)
