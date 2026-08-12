@@ -6,6 +6,19 @@ Status: Informational
 Valkey RFC
 ==========
 
+> **This repository is archived and read-only.**
+>
+> Large proposed changes to Valkey now go through the main
+> [valkey-io/valkey](https://github.com/valkey-io/valkey) repository as an issue
+> or a discussion, where the maintainers and the TSC can review them and record a
+> decision with the `major-decision-pending` label.
+>
+> The RFCs kept here are preserved for reference. Every one of them has a status
+> of **Proposed** unless stated otherwise: being merged here never meant the
+> feature was approved for inclusion in Valkey, and this repository was archived
+> without decisions being made on the open proposals. Do not read anything in
+> here as an accepted design.
+
 This repository is a collection of feature proposals and descriptions of changes to Valkey
 that require some more detail than just the text in a pull request or an issue.
 It is loosely inspired by RFCs and by Python's enhancement proposals (PEP).
