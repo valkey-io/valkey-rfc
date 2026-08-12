@@ -21,7 +21,7 @@ structures by providing powerful searching and filtering capabilities. However, 
 does not have a native data type for JSON. Redis Ltd.‘s RedisJSON is a popular Redis module, but not under a true 
 open source license and hence cannot be distributed freely with Valkey. There's a demand in the Valkey 
 community to have a JSON module that matches most of the features of RedisJSON and is as API-compatible as possible. 
-See the community discussions [here](https://github.com/orgs/valkey-io/discussions?discussions_q=is%3Aopen+JSON).
+See the [community discussions](https://github.com/orgs/valkey-io/discussions?discussions_q=is%3Aopen+JSON).
 
 ## Design Considerations
 
@@ -129,7 +129,7 @@ Enhanced syntax:
 | [start:end:step]  | array slice operator                                                     |
 | ?()               | applies a filter expression to the current array or object               |
 | @                 | used in filter expressions referring to the current node being processed |
-| ==                | equals to, used in filter expressions.                                   |
+| ==                | equal to, used in filter expressions.                                    |
 | !=                | not equal to, used in filter expressions.                                |
 | >                 | greater than, used in filter expressions.                                |
 | >=                | greater than or equal to, used in filter expressions.                    |
@@ -258,12 +258,12 @@ JSON.ARRINSERT <key> <path> <index> <json> [json ...]
     * Array of integers, representing the new length of the array at each path.
     * If a value is an empty array, its corresponding return value is null.
     * If a value is not an array, its corresponding return value is null.
-    * OUTOFBOUNDARIES error if the index argument is out of bounds.
+    * OUTOFBOUNDS error if the index argument is out of bounds.
 
 * If the path is restricted syntax:
     * Integer, the new length of the array.
     * WRONGTYPE error if the value at the path is not an array.
-    * OUTOFBOUNDARIES error if the index argument is out of bounds.
+    * OUTOFBOUNDS error if the index argument is out of bounds.
 
 #### JSON.ARRLEN
 
@@ -347,13 +347,13 @@ JSON.ARRTRIM <key> <path> <start> <end>
     * Array of integers, representing the new length of the array at each path.
     * If a value is an empty array, its corresponding return value is null.
     * If a value is not an array, its corresponding return value is null.
-    * OUTOFBOUNDARIES error if an index argument is out of bounds.
+    * OUTOFBOUNDS error if an index argument is out of bounds.
 
 * If the path is restricted syntax:
     * Integer, the new length of the array.
     * Null if the array is empty.
     * WRONGTYPE error if the value at the path is not an array.
-    * OUTOFBOUNDARIES error if an index argument is out of bounds.
+    * OUTOFBOUNDS error if an index argument is out of bounds.
 
 #### JSON.CLEAR
 
@@ -484,7 +484,7 @@ JSON.GET <key>
 
 #### JSON.MGET
 
-Get serialized JSONs at the path from multiple document keys. Return null for non-existent key or JSON path.
+Get serialized JSONs at the path from multiple document keys. Return null for nonexistent key or JSON path.
 
 ##### Syntax
 
@@ -684,7 +684,7 @@ Set JSON values at the path.
 * If the path calls for an array index:
     * If the parent element does not exist, the command will return a NONEXISTENT error.
     * If the parent element exists but is not an array, the command will return ERROR.
-    * If the parent element exists but the index is out of bounds, the command will return OUTOFBOUNDARIES error.
+    * If the parent element exists but the index is out of bounds, the command will return OUTOFBOUNDS error.
     * If the parent element exists and the index is valid, the element will be replaced by the new JSON value.
 * If the path calls for an object or array, the value (object or array) will be replaced by the new JSON value.
 
@@ -862,7 +862,7 @@ Info metrics are visible through the “info json” or “info modules” comma
 | Config Name            | Default Value | Unit | 	Description                                     |
 |:-----------------------|:--------------|:-----|:------------------------------------------------------|
 | json.max-document-size | 64            | MB   | Maximum memory allowed for a single JSON document.    |
-| josn.max-path-limit    | 128           |      | Maximum nesting levels within a single JSON document. |
+| json.max-path-limit    | 128           |      | Maximum nesting levels within a single JSON document. |
 
 ### Module API
 
@@ -904,7 +904,7 @@ Users can subscribe to the JSON events via the standard keyspace event pub/sub. 
 ```text
 1. enable keyspace event notifications:
     valkey-cli config set notify-keyspace-events KEA
-2. suscribe to keyspace & keyevent event channels:
+2. subscribe to keyspace & keyevent event channels:
     valkey-cli psubscribe '__key*__:*'
 ```
 
