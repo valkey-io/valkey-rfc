@@ -1,6 +1,6 @@
 ---
 RFC: 9
-Status: <Proposed>
+Status: Proposed
 ---
 
 # Valkey Triggers RFC

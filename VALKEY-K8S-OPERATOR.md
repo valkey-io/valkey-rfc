@@ -1,5 +1,7 @@
-RFC: 21
+---
+RFC: 28
 Status: Proposed
+---
 
 # Valkey Kubernetes Operator RFC
 

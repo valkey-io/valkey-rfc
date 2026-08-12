@@ -1,6 +1,6 @@
 ---
 RFC: 33
-Status: Draft
+Status: Proposed
 ---
 
 # Durability High Level Design Document

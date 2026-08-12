@@ -1,6 +1,6 @@
 ---
-RFC: 10
-Status: <Proposed>
+RFC: 11
+Status: Proposed
 ---
 
 # ValkeyProxy RFC

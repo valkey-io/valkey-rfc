@@ -1,5 +1,5 @@
 ---
-RFC: (PR number)
+RFC: 36
 Status: Proposed
 ---
 

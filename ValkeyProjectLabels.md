@@ -1,5 +1,5 @@
 ---
-RFC: 3
+RFC: 7
 Status: Proposed
 ---
 

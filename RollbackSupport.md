@@ -1,6 +1,6 @@
 ---
-RFC: (PR number)
-Status: Draft
+RFC: 32
+Status: Proposed
 ---
 
 # Rollback Support Using Data Versioning for Valkey

@@ -1,6 +1,6 @@
 ---
-RFC: (PR number)
-Status: (Change to Proposed when it's ready for review)
+RFC: 27
+Status: Proposed
 ---
 
 # Valkey Data Tiering
